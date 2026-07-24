@@ -136,5 +136,7 @@
     }
   };
 
-  window.Store = (CFG.supabaseUrl && CFG.supabaseAnonKey) ? SupabaseStore : LocalStore;
+  // 주소 뒤에 ?demo=1 을 붙이면 운영 DB 대신 이 기기에만 저장(화면 테스트용)
+  const forceDemo = new URLSearchParams(location.search).has("demo");
+  window.Store = (!forceDemo && CFG.supabaseUrl && CFG.supabaseAnonKey) ? SupabaseStore : LocalStore;
 })();

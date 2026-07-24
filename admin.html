@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0e7490">
+<title>신고 처리현황 관리자 대시보드</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ========== 로그인 게이트 ========== -->
+<div id="loginGate" class="login-gate">
+  <form id="loginForm" class="login-card">
+    <div class="login-logo">🏥</div>
+    <h1>신고 처리현황<br>관리자 대시보드</h1>
+    <p class="login-desc">관리자 및 담당자 전용 화면입니다.<br>관리자 코드를 입력하세요.</p>
+    <input type="password" id="loginCode" placeholder="관리자 코드" autocomplete="off" autofocus>
+    <button type="submit">접속</button>
+    <p id="loginError" class="login-error hidden">코드가 올바르지 않습니다.</p>
+  </form>
+</div>
+
+<!-- ========== 대시보드 ========== -->
+<div id="dashboard" class="dashboard hidden">
+
+  <header class="top-bar">
+    <div class="top-left">
+      <span class="top-logo">🏥</span>
+      <h1>신고 처리현황 관리자 대시보드</h1>
+      <span id="storeModeBadge" class="mode-badge"></span>
+    </div>
+    <div class="top-right">
+      <span id="clock" class="clock"></span>
+      <button id="refreshBtn" type="button" title="새로고침">🔄 새로고침</button>
+      <button id="csvBtn" type="button" title="CSV 다운로드">⬇️ CSV 다운로드</button>
+      <a href="index.html" class="link-btn">📱 신고 화면</a>
+      <button id="logoutBtn" type="button" class="logout">로그아웃</button>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- 통계 카드 -->
+    <section class="stats" id="statsRow">
+      <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">전체 신고</div></div>
+      <div class="stat-card warn"><div class="stat-num" id="statProgress">0</div><div class="stat-label">진행중</div></div>
+      <div class="stat-card ok"><div class="stat-num" id="statDone">0</div><div class="stat-label">조치완료</div></div>
+      <div class="stat-card info"><div class="stat-num" id="statToday">0</div><div class="stat-label">오늘 접수</div></div>
+    </section>
+
+    <!-- 탭: 신고내역 / 안전 건의함 -->
+    <div class="tab-row">
+      <button class="page-tab active" data-tab="reports" type="button">📋 신고내역 및 처리현황</button>
+      <button class="page-tab" data-tab="suggestions" type="button">💬 안전 건의함</button>
+    </div>
+
+    <!-- ===== 신고내역 ===== -->
+    <section id="panel-reports">
+      <div class="filter-bar">
+        <select id="filterStatus">
+          <option value="">상태: 전체</option>
+          <option value="진행중">진행중</option>
+          <option value="조치완료">조치완료</option>
+        </select>
+        <select id="filterType">
+          <option value="">유형: 전체</option>
+          <option value="유해 위험 요소(아차사고 포함)">유해 위험 요소(아차사고 포함)</option>
+          <option value="시설파손/고장">시설파손/고장</option>
+          <option value="위생/환경">위생/환경</option>
+          <option value="기타">기타</option>
+        </select>
+        <input type="search" id="filterSearch" placeholder="위치·설명·담당자 검색">
+        <span id="autoRefreshInfo" class="auto-info">60초마다 자동 갱신</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>발생일시</th>
+              <th>신고유형</th>
+              <th>발생위치</th>
+              <th>점검사항 (상황설명·사진)</th>
+              <th>담당자</th>
+              <th>조치일</th>
+              <th>상태</th>
+              <th>조치완료 처리</th>
+            </tr>
+          </thead>
+          <tbody id="reportTbody"></tbody>
+        </table>
+        <div id="reportEmpty" class="empty hidden">표시할 신고가 없습니다.</div>
+      </div>
+    </section>
+
+    <!-- ===== 안전 건의함 ===== -->
+    <section id="panel-suggestions" class="hidden">
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr><th style="width:120px">등록일</th><th style="width:220px">제목</th><th>내용</th><th style="width:100px">작성자</th></tr>
+          </thead>
+          <tbody id="suggestTbody"></tbody>
+        </table>
+        <div id="suggestEmpty" class="empty hidden">등록된 건의가 없습니다.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- 상세 모달 -->
+<div id="detailModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>신고 상세</h3>
+      <button id="detailCloseBtn" type="button">✕</button>
+    </div>
+    <div id="detailBody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="config.js"></script>
+<script src="storage.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
