@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e7490">
+<title>시설 보수 신고 및 안전 건의</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1 id="headerTitle">시설 보수 신고 및 안전 건의</h1>
+  <button id="adminBtn" class="admin-btn" type="button">관리자</button>
+</header>
+
+<div id="modeBanner" class="mode-banner hidden">
+  데모 모드: 데이터가 이 기기(브라우저)에만 저장됩니다. 실제 운영은 README의 Supabase 연동 안내를 참고하세요.
+</div>
+
+<main class="app-main">
+
+  <!-- ================= 신고화면 ================= -->
+  <section id="view-report" class="view">
+    <h2 class="view-title">신고화면</h2>
+    <form id="reportForm" novalidate>
+
+      <div class="field">
+        <label class="field-label">1. 신고유형 <span class="req">*</span></label>
+        <div class="radio-group" id="typeGroup">
+          <label class="radio-item"><input type="radio" name="type" value="유해 위험 요소(아차사고 포함)" required><span>유해 위험 요소<br><small>(아차사고 포함)</small></span></label>
+          <label class="radio-item"><input type="radio" name="type" value="시설파손/고장"><span>시설파손/고장</span></label>
+          <label class="radio-item"><input type="radio" name="type" value="위생/환경"><span>위생/환경</span></label>
+          <label class="radio-item"><input type="radio" name="type" value="기타"><span>기타</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="location">2. 발생 위치 <span class="req">*</span></label>
+        <input type="text" id="location" placeholder="예시: 본관 5병동 간호사실" required>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="occurredAt">3. 발생일시 <span class="req">*</span></label>
+        <input type="datetime-local" id="occurredAt" required>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="description">4. 상황설명 <span class="req">*</span></label>
+        <textarea id="description" rows="4" placeholder="발견한 상황을 자세히 적어주세요." required></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">5. 사진첨부 <span class="req">*(필수)</span></label>
+        <label class="photo-drop" id="photoDrop">
+          <input type="file" id="photo" accept="image/*" hidden>
+          <span id="photoDropText">📷 눌러서 사진 선택 또는 촬영</span>
+        </label>
+        <img id="photoPreview" class="photo-preview hidden" alt="첨부 사진 미리보기">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="contact">6. 연락처 <span class="opt">(선택사항)</span></label>
+        <input type="tel" id="contact" placeholder="처리 결과 안내가 필요하면 입력하세요">
+      </div>
+
+      <div class="field consent-box hidden" id="consentBox">
+        <label class="field-label">7. 개인정보 수집 및 이용 동의</label>
+        <div class="consent-text">
+          <p><strong>수집 항목:</strong> 연락처(전화번호)</p>
+          <p><strong>수집 목적:</strong> 신고 처리 결과 안내 및 추가 확인</p>
+          <p><strong>보유 기간:</strong> 신고 처리 완료 후 1년</p>
+          <p>동의를 거부할 수 있으며, 거부 시 연락처 없이 신고할 수 있습니다.</p>
+        </div>
+        <label class="consent-check">
+          <input type="checkbox" id="consentCheck">
+          <span>개인정보 수집 및 이용에 동의합니다.</span>
+        </label>
+      </div>
+
+      <button type="submit" id="submitBtn" class="primary-btn">제출</button>
+    </form>
+  </section>
+
+  <!-- ================= 신고내역 확인 및 처리현황 ================= -->
+  <section id="view-list" class="view hidden">
+    <h2 class="view-title">신고내역 확인 및 처리현황</h2>
+    <div id="adminStateBar" class="admin-state hidden">
+      🔑 관리자 모드 <button id="adminLogoutBtn" type="button">해제</button>
+    </div>
+    <div id="reportList" class="report-list"></div>
+  </section>
+
+  <!-- ================= 안전 건의함 ================= -->
+  <section id="view-board" class="view hidden">
+    <h2 class="view-title">안전 건의함</h2>
+    <button id="writeBtn" class="primary-btn" type="button">✏️ 건의 작성</button>
+    <form id="suggestForm" class="suggest-form hidden">
+      <div class="field">
+        <label class="field-label" for="sTitle">제목 <span class="req">*</span></label>
+        <input type="text" id="sTitle" required maxlength="80">
+      </div>
+      <div class="field">
+        <label class="field-label" for="sContent">내용 <span class="req">*</span></label>
+        <textarea id="sContent" rows="4" required></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label" for="sAuthor">작성자 <span class="opt">(선택, 미입력 시 익명)</span></label>
+        <input type="text" id="sAuthor" maxlength="20">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="primary-btn">등록</button>
+        <button type="button" id="writeCancelBtn" class="ghost-btn">취소</button>
+      </div>
+    </form>
+    <div id="suggestList" class="suggest-list"></div>
+  </section>
+
+</main>
+
+<!-- 하단 탭 내비게이션 (모바일 전용) -->
+<nav class="tab-bar">
+  <button class="tab active" data-view="report" type="button"><span class="tab-icon">🚨</span>신고화면</button>
+  <button class="tab" data-view="list" type="button"><span class="tab-icon">📋</span>신고내역·처리현황</button>
+  <button class="tab" data-view="board" type="button"><span class="tab-icon">💬</span>안전 건의함</button>
+</nav>
+
+<!-- 신고 상세 모달 -->
+<div id="detailModal" class="modal hidden">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <h3>신고 상세</h3>
+      <button id="detailCloseBtn" class="close-btn" type="button">✕</button>
+    </div>
+    <div id="detailBody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="config.js"></script>
+<script src="storage.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
