@@ -97,12 +97,19 @@
 
   function renderStats() {
     const today = new Date();
-    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    // 접수일시(UTC 저장)를 이 컴퓨터의 현지 시간대로 변환해 오늘 여부 판단
+    const isToday = (v) => {
+      if (!v) return false;
+      const d = new Date(v);
+      return !isNaN(d) &&
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+    };
     $("#statTotal").textContent = reportsCache.length;
     $("#statProgress").textContent = reportsCache.filter((r) => r.status === "진행중").length;
     $("#statDone").textContent = reportsCache.filter((r) => r.status === "조치완료").length;
-    $("#statToday").textContent = reportsCache.filter((r) =>
-      (r.createdAt || "").slice(0, 10) === todayStr).length;
+    $("#statToday").textContent = reportsCache.filter((r) => isToday(r.createdAt)).length;
   }
 
   function applyFilters(list) {
