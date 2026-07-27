@@ -94,7 +94,9 @@
       const { error } = await this.client.from("reports").insert({
         type: r.type,
         location: r.location,
-        occurred_at: r.occurredAt,
+        // datetime-local 값(시간대 없는 현지 시각)을 UTC ISO로 변환해 저장
+        // — 그대로 보내면 DB가 UTC로 해석해 9시간 어긋남
+        occurred_at: new Date(r.occurredAt).toISOString(),
         description: r.description,
         photo_url: pub.publicUrl,
         contact: r.contact || null,
