@@ -93,8 +93,8 @@
     $("#occurredAt").value = d.toISOString().slice(0, 16);
   }
 
-  // 사진 첨부 + 압축(최대 1280px, JPEG)
-  async function compressImage(file, maxDim = 1280, quality = 0.72) {
+  // 사진 첨부 + 압축(최대 1024px, 목표 150KB 이하가 될 때까지 품질 단계 하향)
+  async function compressImage(file, maxDim = 1024, targetKB = 150) {
     const dataUrl = await new Promise((res, rej) => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
@@ -112,7 +112,14 @@
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", quality);
+    // 목표 용량에 들어올 때까지 품질을 낮춰가며 재압축 (최저 40%)
+    let quality = 0.7;
+    let out = canvas.toDataURL("image/jpeg", quality);
+    while (out.length * 0.75 > targetKB * 1024 && quality > 0.4) {
+      quality -= 0.1;
+      out = canvas.toDataURL("image/jpeg", quality);
+    }
+    return out;
   }
 
   $("#photo").addEventListener("change", async (e) => {
