@@ -206,10 +206,53 @@
   $("#refreshBtn").addEventListener("click", () => { loadReports(); toast("새로고침했습니다."); });
 
   // ---------- 상세 모달 ----------
+  let detailId = null;
+
+  function buildKakaoMsg(r) {
+    const photoLine = /^https?:/.test(r.photo || "")
+      ? `■ 현장사진: ${r.photo}`
+      : "■ 현장사진: 관리자 대시보드에서 확인";
+    return [
+      "[시설 보수 업무의뢰]",
+      `■ 신고유형: ${r.type}`,
+      `■ 발생일시: ${fmtDateTime(r.occurredAt)}`,
+      `■ 발생위치: ${r.location}`,
+      `■ 상황설명: ${r.description}`,
+      `■ 담당자: ${r.assignee || ""}`,
+      photoLine,
+      `■ 처리현황 확인: ${location.origin + location.pathname}`,
+      "",
+      "확인 후 조치 부탁드립니다. 조치 완료 시 대시보드에서 '완료 처리' 체크해 주세요."
+    ].join("\n");
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    }
+  }
+
   function openDetail(id) {
-    const r = reportsCache.find((x) => String(x.id) === String(id));
+    detailId = id;
+    renderDetail();
+    $("#detailModal").classList.remove("hidden");
+  }
+
+  function renderDetail() {
+    const r = reportsCache.find((x) => String(x.id) === String(detailId));
     if (!r) return;
     const done = r.status === "조치완료";
+    const assigned = !!(r.assignee && String(r.assignee).trim());
+
+    $("#detailTitleTag").textContent = assigned ? "" : "(담당자 지정 필요)";
+
     $("#detailBody").innerHTML = `
       <table class="detail-table">
         <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
@@ -217,14 +260,57 @@
         <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
         <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
         <tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>
-        <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
+        <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
         <tr><th>접수일시</th><td>${fmtDateTime(r.createdAt)}</td></tr>
       </table>
+
+      <div class="detail-assign">
+        <input type="text" id="detailAssignee" placeholder="담당자 이름 입력" value="${escapeHtml(r.assignee || "")}">
+        <button type="button" id="detailAssignSave">담당자 지정</button>
+      </div>
+
+      <div class="kakao-box">
+        <button type="button" id="kakaoGenBtn" class="kakao-btn" ${assigned ? "" : "disabled"}>💬 업무의뢰 카톡 메시지 생성</button>
+        ${assigned ? "" : '<p class="kakao-hint">담당자를 지정하면 카톡 메시지를 만들 수 있습니다.</p>'}
+        <div id="kakaoMsgWrap" class="kakao-msg-wrap hidden">
+          <textarea id="kakaoMsg" readonly rows="11"></textarea>
+          <button type="button" id="kakaoCopyBtn" class="kakao-btn">📋 메시지 복사하기</button>
+          <p class="kakao-hint">복사한 뒤 담당자와의 카카오톡 채팅방에 붙여넣어 전송하세요. 사진은 링크를 누르면 열립니다.</p>
+        </div>
+      </div>
+
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
     `;
-    $("#detailModal").classList.remove("hidden");
+
+    $("#detailAssignSave").addEventListener("click", async () => {
+      const name = $("#detailAssignee").value.trim();
+      try {
+        await Store.updateReport(r.id, { assignee: name || null });
+        r.assignee = name || null;
+        toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+        renderDetail();
+        renderTable();
+      } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
+    });
+
+    $("#kakaoGenBtn").addEventListener("click", () => {
+      $("#kakaoMsg").value = buildKakaoMsg(r);
+      $("#kakaoMsgWrap").classList.remove("hidden");
+    });
+
+    $("#kakaoCopyBtn").addEventListener("click", async () => {
+      const ok = await copyText($("#kakaoMsg").value);
+      if (ok) {
+        toast("메시지가 복사되었습니다. 카카오톡에 붙여넣으세요.");
+      } else {
+        // 자동 복사가 막힌 환경: 메시지를 전체 선택해 두어 Ctrl+C만 누르면 되게 함
+        $("#kakaoMsg").focus();
+        $("#kakaoMsg").select();
+        toast("메시지를 선택해 두었습니다. Ctrl+C로 복사하세요.");
+      }
+    });
   }
   $("#detailCloseBtn").addEventListener("click", () => $("#detailModal").classList.add("hidden"));
   $("#detailModal").addEventListener("click", (e) => {
