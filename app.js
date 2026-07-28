@@ -5,7 +5,12 @@
   const $ = (sel) => document.querySelector(sel);
   const Store = window.Store;
 
-  let adminMode = sessionStorage.getItem("fs_admin") === "1";
+  const ROLE_NAMES = { master: "마스터", manager: "시설팀장", staff: "담당자(공용)" };
+  let role = sessionStorage.getItem("fs_role");
+  if (!ROLE_NAMES[role]) role = null;
+  sessionStorage.removeItem("fs_admin"); // 이전 버전 세션 정리
+  let adminMode = !!role;
+  const canManage = () => role === "master" || role === "manager";
   let reportsCache = [];
   let photoDataUrl = null;
 
@@ -57,33 +62,45 @@
     t.addEventListener("click", () => switchView(t.dataset.view))
   );
 
-  // ---------- 관리자 모드 ----------
+  // ---------- 관리자 모드 (3단계 계정) ----------
   function refreshAdminUI() {
     $("#adminStateBar").classList.toggle("hidden", !adminMode);
+    $("#adminStateText").textContent = adminMode ? `🔑 ${ROLE_NAMES[role]} 계정` : "";
     $("#adminBtn").textContent = adminMode ? "관리자 ✓" : "관리자";
   }
 
-  $("#adminBtn").addEventListener("click", () => {
+  async function resolveRole(code) {
+    if (code && code === window.APP_CONFIG.masterCode) return "master";
+    const s = await Store.getSettings();
+    if (code && code === s.pw_manager) return "manager";
+    if (code && code === s.pw_staff) return "staff";
+    return null;
+  }
+
+  $("#adminBtn").addEventListener("click", async () => {
     if (adminMode) { switchView("list"); return; }
-    const code = prompt("관리자 코드를 입력하세요.");
+    const code = prompt("계정 비밀번호를 입력하세요.\n(마스터 / 시설팀장 / 담당자 공용)");
     if (code === null) return;
-    if (code === window.APP_CONFIG.adminCode) {
+    const found = await resolveRole(code);
+    if (found) {
+      role = found;
       adminMode = true;
-      sessionStorage.setItem("fs_admin", "1");
+      sessionStorage.setItem("fs_role", role);
       refreshAdminUI();
-      toast("관리자 모드가 활성화되었습니다.");
+      toast(`${ROLE_NAMES[role]} 계정으로 로그인했습니다.`);
       switchView("list");
     } else {
-      toast("코드가 올바르지 않습니다.");
+      toast("비밀번호가 올바르지 않습니다.");
     }
   });
 
   $("#adminLogoutBtn").addEventListener("click", () => {
     adminMode = false;
-    sessionStorage.removeItem("fs_admin");
+    role = null;
+    sessionStorage.removeItem("fs_role");
     refreshAdminUI();
     renderReports();
-    toast("관리자 모드가 해제되었습니다.");
+    toast("로그아웃했습니다.");
   });
 
   // ---------- 신고화면 ----------
@@ -240,13 +257,15 @@
 
     let adminHtml = "";
     if (adminMode) {
-      adminHtml = `
-      <div class="admin-panel">
-        <h4>🔑 관리자 처리</h4>
+      const assignRow = canManage() ? `
         <div class="assignee-row">
           <input type="text" id="assigneeInput" placeholder="담당자 이름" value="${escapeHtml(r.assignee || "")}">
           <button type="button" id="assigneeSaveBtn">담당자 지정</button>
-        </div>
+        </div>` : "";
+      adminHtml = `
+      <div class="admin-panel">
+        <h4>🔑 ${ROLE_NAMES[role]} 처리</h4>
+        ${assignRow}
         <label class="done-check">
           <input type="checkbox" id="doneCheck" ${done ? "checked" : ""}>
           <span>${done ? "조치완료됨 (해제하면 진행중으로 변경)" : "진행중 — 체크하면 조치완료 처리"}</span>
@@ -263,7 +282,7 @@
         <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
-        ${adminMode && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
+        ${canManage() && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
       ${adminHtml}
@@ -271,7 +290,7 @@
     $("#detailModal").classList.remove("hidden");
 
     if (adminMode) {
-      $("#assigneeSaveBtn").addEventListener("click", async () => {
+      if (canManage()) $("#assigneeSaveBtn").addEventListener("click", async () => {
         const name = $("#assigneeInput").value.trim();
         try {
           await Store.updateReport(r.id, { assignee: name || null });

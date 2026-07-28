@@ -38,13 +38,30 @@
     toastTimer = setTimeout(() => el.classList.add("hidden"), 2600);
   }
 
-  // ---------- 로그인 게이트 ----------
-  function isLoggedIn() { return sessionStorage.getItem("fs_admin") === "1"; }
+  // ---------- 로그인 게이트 (3단계 계정) ----------
+  const ROLE_NAMES = { master: "마스터", manager: "시설팀장", staff: "담당자(공용)" };
+  let role = sessionStorage.getItem("fs_role");
+  if (!ROLE_NAMES[role]) role = null;
+  sessionStorage.removeItem("fs_admin"); // 이전 버전 세션 정리
 
-  $("#loginForm").addEventListener("submit", (e) => {
+  const isMaster = () => role === "master";
+  const canManage = () => role === "master" || role === "manager";
+
+  async function resolveRole(code) {
+    if (code && code === window.APP_CONFIG.masterCode) return "master";
+    const s = await Store.getSettings();
+    if (code && code === s.pw_manager) return "manager";
+    if (code && code === s.pw_staff) return "staff";
+    return null;
+  }
+
+  $("#loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if ($("#loginCode").value === window.APP_CONFIG.adminCode) {
-      sessionStorage.setItem("fs_admin", "1");
+    const found = await resolveRole($("#loginCode").value);
+    if (found) {
+      role = found;
+      sessionStorage.setItem("fs_role", role);
+      $("#loginError").classList.add("hidden");
       enterDashboard();
     } else {
       $("#loginError").classList.remove("hidden");
@@ -54,7 +71,7 @@
   });
 
   $("#logoutBtn").addEventListener("click", () => {
-    sessionStorage.removeItem("fs_admin");
+    sessionStorage.removeItem("fs_role");
     location.reload();
   });
 
@@ -63,6 +80,9 @@
     $("#dashboard").classList.remove("hidden");
     $("#storeModeBadge").textContent =
       Store.mode === "supabase" ? "운영 DB 연결됨" : "데모 모드 (이 기기 데이터)";
+    $("#roleBadge").textContent = `👤 ${ROLE_NAMES[role]}`;
+    $("#csvBtn").classList.toggle("hidden", !canManage());
+    $("#pwBtn").classList.toggle("hidden", !isMaster());
     startClock();
     loadReports();
     loadSuggestions();
@@ -147,8 +167,10 @@
           </div>
         </td>
         <td>
-          <input class="assignee-input" data-act="assignee" value="${escapeHtml(r.assignee || "")}"
-                 placeholder="담당자 입력" title="입력 후 Enter 또는 다른 곳 클릭 시 저장">
+          ${canManage()
+            ? `<input class="assignee-input" data-act="assignee" value="${escapeHtml(r.assignee || "")}"
+                 placeholder="담당자 입력" title="입력 후 Enter 또는 다른 곳 클릭 시 저장">`
+            : escapeHtml(r.assignee || "미지정")}
         </td>
         <td class="cell-datetime">${r.completedAt ? fmtDate(r.completedAt) : "-"}</td>
         <td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td>
@@ -254,19 +276,7 @@
 
     $("#detailTitleTag").textContent = assigned ? "" : "(담당자 지정 필요)";
 
-    $("#detailBody").innerHTML = `
-      <table class="detail-table">
-        <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
-        <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
-        <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
-        <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
-        <tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>
-        <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
-        <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
-        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
-        <tr><th>접수일시</th><td>${fmtDateTime(r.createdAt)}</td></tr>
-      </table>
-
+    const manageHtml = canManage() ? `
       <div class="detail-assign">
         <input type="text" id="detailAssignee" placeholder="담당자 이름 입력" value="${escapeHtml(r.assignee || "")}">
         <button type="button" id="detailAssignSave">담당자 지정</button>
@@ -280,38 +290,69 @@
           <button type="button" id="kakaoCopyBtn" class="kakao-btn">📋 메시지 복사하기</button>
           <p class="kakao-hint">복사한 뒤 담당자와의 카카오톡 채팅방에 붙여넣어 전송하세요. 사진은 링크를 누르면 열립니다.</p>
         </div>
-      </div>
+      </div>` : "";
+
+    $("#detailBody").innerHTML = `
+      <table class="detail-table">
+        <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
+        <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
+        <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
+        <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
+        ${canManage() ? `<tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>` : ""}
+        <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
+        <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
+        <tr><th>접수일시</th><td>${fmtDateTime(r.createdAt)}</td></tr>
+      </table>
+
+      ${manageHtml}
 
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
+
+      ${isMaster() ? '<button type="button" id="detailDeleteBtn" class="del-btn-wide">🗑 이 신고 삭제 (마스터 전용)</button>' : ""}
     `;
 
-    $("#detailAssignSave").addEventListener("click", async () => {
-      const name = $("#detailAssignee").value.trim();
-      try {
-        await Store.updateReport(r.id, { assignee: name || null });
-        r.assignee = name || null;
-        toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
-        renderDetail();
-        renderTable();
-      } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
-    });
+    if (canManage()) {
+      $("#detailAssignSave").addEventListener("click", async () => {
+        const name = $("#detailAssignee").value.trim();
+        try {
+          await Store.updateReport(r.id, { assignee: name || null });
+          r.assignee = name || null;
+          toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+          renderDetail();
+          renderTable();
+        } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
+      });
 
-    $("#kakaoGenBtn").addEventListener("click", () => {
-      $("#kakaoMsg").value = buildKakaoMsg(r);
-      $("#kakaoMsgWrap").classList.remove("hidden");
-    });
+      $("#kakaoGenBtn").addEventListener("click", () => {
+        $("#kakaoMsg").value = buildKakaoMsg(r);
+        $("#kakaoMsgWrap").classList.remove("hidden");
+      });
 
-    $("#kakaoCopyBtn").addEventListener("click", async () => {
-      const ok = await copyText($("#kakaoMsg").value);
-      if (ok) {
-        toast("메시지가 복사되었습니다. 카카오톡에 붙여넣으세요.");
-      } else {
-        // 자동 복사가 막힌 환경: 메시지를 전체 선택해 두어 Ctrl+C만 누르면 되게 함
-        $("#kakaoMsg").focus();
-        $("#kakaoMsg").select();
-        toast("메시지를 선택해 두었습니다. Ctrl+C로 복사하세요.");
-      }
-    });
+      $("#kakaoCopyBtn").addEventListener("click", async () => {
+        const ok = await copyText($("#kakaoMsg").value);
+        if (ok) {
+          toast("메시지가 복사되었습니다. 카카오톡에 붙여넣으세요.");
+        } else {
+          // 자동 복사가 막힌 환경: 메시지를 전체 선택해 두어 Ctrl+C만 누르면 되게 함
+          $("#kakaoMsg").focus();
+          $("#kakaoMsg").select();
+          toast("메시지를 선택해 두었습니다. Ctrl+C로 복사하세요.");
+        }
+      });
+    }
+
+    if (isMaster()) {
+      $("#detailDeleteBtn").addEventListener("click", async () => {
+        if (!confirm("이 신고를 완전히 삭제할까요? 되돌릴 수 없습니다.")) return;
+        try {
+          await Store.deleteReport(r.id, r.photo);
+          toast("신고가 삭제되었습니다.");
+          $("#detailModal").classList.add("hidden");
+          loadReports(true);
+        } catch (err) { console.error(err); toast("삭제에 실패했습니다."); }
+      });
+    }
   }
   $("#detailCloseBtn").addEventListener("click", () => $("#detailModal").classList.add("hidden"));
   $("#detailModal").addEventListener("click", (e) => {
@@ -342,14 +383,52 @@
     try { list = await Store.listSuggestions(); }
     catch (err) { console.error(err); return; }
     $("#suggestEmpty").classList.toggle("hidden", list.length > 0);
+    $("#suggestManageTh").classList.toggle("hidden", !isMaster());
     $("#suggestTbody").innerHTML = list.map((s) => `
       <tr>
         <td class="cell-datetime">${fmtDateTime(s.createdAt)}</td>
         <td style="font-weight:700">${escapeHtml(s.title)}</td>
         <td style="white-space:pre-wrap">${escapeHtml(s.content)}</td>
         <td>${escapeHtml(s.author || "익명")}</td>
+        ${isMaster() ? `<td><button type="button" class="del-btn" data-del="${escapeHtml(s.id)}">🗑 삭제</button></td>` : ""}
       </tr>`).join("");
+
+    if (isMaster()) {
+      document.querySelectorAll("#suggestTbody [data-del]").forEach((btn) =>
+        btn.addEventListener("click", async () => {
+          if (!confirm("이 건의 글을 삭제할까요? 되돌릴 수 없습니다.")) return;
+          try {
+            await Store.deleteSuggestion(btn.dataset.del);
+            toast("건의 글이 삭제되었습니다.");
+            loadSuggestions();
+          } catch (err) { console.error(err); toast("삭제에 실패했습니다."); }
+        })
+      );
+    }
   }
+
+  // ---------- 비밀번호 관리 (마스터 전용) ----------
+  $("#pwBtn").addEventListener("click", () => $("#pwModal").classList.remove("hidden"));
+  $("#pwCloseBtn").addEventListener("click", () => $("#pwModal").classList.add("hidden"));
+  $("#pwModal").addEventListener("click", (e) => {
+    if (e.target === $("#pwModal")) $("#pwModal").classList.add("hidden");
+  });
+
+  async function savePw(key, sel, label) {
+    const v = $(sel).value.trim();
+    if (v.length < 4) return toast("비밀번호는 4자 이상으로 입력해 주세요.");
+    if (v === window.APP_CONFIG.masterCode) return toast("마스터 비밀번호와 같게 설정할 수 없습니다.");
+    try {
+      await Store.setSetting(key, v);
+      $(sel).value = "";
+      toast(`${label} 비밀번호가 변경되었습니다.`);
+    } catch (err) {
+      console.error(err);
+      toast("변경 실패: 운영 DB에 계정 설정(SQL)이 필요합니다. README 참고");
+    }
+  }
+  $("#pwSaveManager").addEventListener("click", () => savePw("pw_manager", "#pwManagerInput", "시설팀장"));
+  $("#pwSaveStaff").addEventListener("click", () => savePw("pw_staff", "#pwStaffInput", "담당자(공용)"));
 
   // ---------- 탭 전환 ----------
   document.querySelectorAll(".page-tab").forEach((t) =>
@@ -366,7 +445,7 @@
   async function init() {
     try { await Store.init(); }
     catch (err) { console.error(err); toast("데이터 저장소 연결에 실패했습니다."); }
-    if (isLoggedIn()) enterDashboard();
+    if (role) enterDashboard();
   }
   init();
 })();

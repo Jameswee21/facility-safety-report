@@ -39,6 +39,22 @@
       const list = this._get("fs_suggestions");
       list.unshift(s);
       this._set("fs_suggestions", list);
+    },
+
+    async getSettings() {
+      const s = JSON.parse(localStorage.getItem("fs_settings") || "{}");
+      return { pw_manager: s.pw_manager || "2026", pw_staff: s.pw_staff || "1111" };
+    },
+    async setSetting(key, value) {
+      const s = JSON.parse(localStorage.getItem("fs_settings") || "{}");
+      s[key] = value;
+      localStorage.setItem("fs_settings", JSON.stringify(s));
+    },
+    async deleteReport(id) {
+      this._set("fs_reports", this._get("fs_reports").filter((x) => x.id !== id));
+    },
+    async deleteSuggestion(id) {
+      this._set("fs_suggestions", this._get("fs_suggestions").filter((x) => x.id !== id));
     }
   };
 
@@ -134,6 +150,36 @@
         content: s.content,
         author: s.author || null
       });
+      if (error) throw error;
+    },
+
+    async getSettings() {
+      // app_settings 테이블이 아직 없으면 초기 비밀번호로 동작
+      try {
+        const { data, error } = await this.client.from("app_settings").select("key,value");
+        if (error) throw error;
+        const s = {};
+        data.forEach((row) => { s[row.key] = row.value; });
+        return { pw_manager: s.pw_manager || "2026", pw_staff: s.pw_staff || "1111" };
+      } catch {
+        return { pw_manager: "2026", pw_staff: "1111" };
+      }
+    },
+    async setSetting(key, value) {
+      const { error } = await this.client.from("app_settings").upsert({ key, value });
+      if (error) throw error;
+    },
+    async deleteReport(id, photoUrl) {
+      const { error } = await this.client.from("reports").delete().eq("id", id);
+      if (error) throw error;
+      // 저장소의 사진 파일도 함께 삭제 (실패해도 무시)
+      const path = (photoUrl || "").split("/report-photos/")[1];
+      if (path) {
+        try { await this.client.storage.from("report-photos").remove([path]); } catch {}
+      }
+    },
+    async deleteSuggestion(id) {
+      const { error } = await this.client.from("suggestions").delete().eq("id", id);
       if (error) throw error;
     }
   };

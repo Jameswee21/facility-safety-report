@@ -29,11 +29,13 @@
       <span class="top-logo">🏥</span>
       <h1>신고 처리현황 관리자 대시보드</h1>
       <span id="storeModeBadge" class="mode-badge"></span>
+      <span id="roleBadge" class="mode-badge"></span>
     </div>
     <div class="top-right">
       <span id="clock" class="clock"></span>
       <button id="refreshBtn" type="button" title="새로고침">🔄 새로고침</button>
       <button id="csvBtn" type="button" title="CSV 다운로드">⬇️ CSV 다운로드</button>
+      <button id="pwBtn" type="button" class="hidden" title="계정 비밀번호 관리">🔐 비밀번호 관리</button>
       <a href="index.html" class="link-btn">📱 신고 화면</a>
       <button id="logoutBtn" type="button" class="logout">로그아웃</button>
     </div>
@@ -99,7 +101,7 @@
       <div class="table-wrap">
         <table class="report-table">
           <thead>
-            <tr><th style="width:120px">등록일</th><th style="width:220px">제목</th><th>내용</th><th style="width:100px">작성자</th></tr>
+            <tr><th style="width:120px">등록일</th><th style="width:220px">제목</th><th>내용</th><th style="width:100px">작성자</th><th id="suggestManageTh" class="hidden" style="width:90px">관리</th></tr>
           </thead>
           <tbody id="suggestTbody"></tbody>
         </table>
@@ -121,10 +123,33 @@
   </div>
 </div>
 
+<!-- 비밀번호 관리 모달 (마스터 전용) -->
+<div id="pwModal" class="modal hidden">
+  <div class="modal-card" style="width:440px">
+    <div class="modal-head">
+      <h3>🔐 계정 비밀번호 관리</h3>
+      <button id="pwCloseBtn" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="pw-note">마스터 계정 비밀번호는 config.js 파일에서 변경합니다.<br>아래 비밀번호는 저장 즉시 적용됩니다.</p>
+      <label class="pw-label">시설팀장 계정 새 비밀번호</label>
+      <div class="detail-assign">
+        <input type="text" id="pwManagerInput" placeholder="4자 이상" autocomplete="off">
+        <button type="button" id="pwSaveManager">변경</button>
+      </div>
+      <label class="pw-label">담당자(공용) 계정 새 비밀번호</label>
+      <div class="detail-assign">
+        <input type="text" id="pwStaffInput" placeholder="4자 이상" autocomplete="off">
+        <button type="button" id="pwSaveStaff">변경</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
-<script src="config.js?v=2"></script>
-<script src="storage.js?v=2"></script>
-<script src="admin.js?v=4"></script>
+<script src="config.js?v=3"></script>
+<script src="storage.js?v=3"></script>
+<script src="admin.js?v=5"></script>
 </body>
 </html>
