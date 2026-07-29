@@ -443,6 +443,10 @@
 
   // ---------- 초기화 ----------
   async function init() {
+    // CSS 마스킹을 지원하지 않는 브라우저(Firefox 등)에서는 password 타입으로 전환
+    if (!(window.CSS && CSS.supports && CSS.supports("-webkit-text-security", "disc"))) {
+      $("#loginCode").type = "password";
+    }
     try { await Store.init(); }
     catch (err) { console.error(err); toast("데이터 저장소 연결에 실패했습니다."); }
     if (role) enterDashboard();

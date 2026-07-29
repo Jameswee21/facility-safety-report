@@ -57,6 +57,8 @@ body {
   margin-bottom: 12px;
 }
 .login-card input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+/* 입력값을 ●로 가림 (password 타입을 쓰지 않아 브라우저 유출 경고가 뜨지 않음) */
+.login-card input.masked { -webkit-text-security: disc; }
 .login-card button {
   width: 100%;
   background: var(--primary);
