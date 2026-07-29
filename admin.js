@@ -298,7 +298,7 @@
         <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
         <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
         <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
-        ${canManage() ? `<tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>` : ""}
+        <tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>
         <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>

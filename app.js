@@ -282,7 +282,7 @@
         <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
-        ${canManage() && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
+        ${adminMode && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
       ${adminHtml}
