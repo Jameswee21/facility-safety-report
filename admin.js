@@ -229,6 +229,21 @@
 
   // ---------- 상세 모달 ----------
   let detailId = null;
+  let detailEditing = false;
+
+  const REPORT_TYPES = [
+    "유해 위험 요소(아차사고 포함)",
+    "시설파손/고장",
+    "위생/환경",
+    "기타"
+  ];
+
+  // DB의 UTC 값을 datetime-local 입력용 현지 시각 문자열로 변환
+  function toLocalInput(v) {
+    const d = new Date(v);
+    if (isNaN(d)) return "";
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
   function buildKakaoMsg(r) {
     const photoLine = /^https?:/.test(r.photo || "")
@@ -264,13 +279,82 @@
 
   function openDetail(id) {
     detailId = id;
+    detailEditing = false;
     renderDetail();
     $("#detailModal").classList.remove("hidden");
+  }
+
+  // 마스터 전용: 신고내용 수정 화면
+  function renderDetailEdit(r) {
+    $("#detailTitleTag").textContent = "(수정 중)";
+    $("#detailBody").innerHTML = `
+      <div class="edit-form">
+        <label class="pw-label">신고유형</label>
+        <select id="editType">
+          ${REPORT_TYPES.map((t) =>
+            `<option value="${escapeHtml(t)}" ${t === r.type ? "selected" : ""}>${escapeHtml(t)}</option>`
+          ).join("")}
+        </select>
+
+        <label class="pw-label">발생일시</label>
+        <input type="datetime-local" id="editOccurredAt" value="${toLocalInput(r.occurredAt)}">
+
+        <label class="pw-label">발생위치</label>
+        <input type="text" id="editLocation" value="${escapeHtml(r.location || "")}">
+
+        <label class="pw-label">상황설명</label>
+        <textarea id="editDescription" rows="5">${escapeHtml(r.description || "")}</textarea>
+
+        <label class="pw-label">연락처 <span style="font-weight:400;color:var(--muted)">(비우면 삭제)</span></label>
+        <input type="text" id="editContact" value="${escapeHtml(r.contact || "")}">
+
+        <div class="edit-btn-row">
+          <button type="button" id="editSaveBtn" class="save-btn">💾 저장</button>
+          <button type="button" id="editCancelBtn" class="cancel-btn">취소</button>
+        </div>
+        <p class="kakao-hint">사진은 수정할 수 없습니다. 사진을 바꿔야 하면 신고를 삭제하고 다시 접수해 주세요.</p>
+      </div>
+    `;
+
+    $("#editSaveBtn").addEventListener("click", async () => {
+      const type = $("#editType").value;
+      const occurredAt = $("#editOccurredAt").value;
+      const location = $("#editLocation").value.trim();
+      const description = $("#editDescription").value.trim();
+      const contact = $("#editContact").value.trim();
+      if (!occurredAt) return toast("발생일시를 입력해 주세요.");
+      if (!location) return toast("발생위치를 입력해 주세요.");
+      if (!description) return toast("상황설명을 입력해 주세요.");
+
+      const btn = $("#editSaveBtn");
+      btn.disabled = true;
+      btn.textContent = "저장 중...";
+      try {
+        await Store.updateReport(r.id, {
+          type, occurredAt, location, description, contact: contact || null
+        });
+        await loadReports(true);
+        detailEditing = false;
+        renderDetail();
+        toast("신고내용이 수정되었습니다.");
+      } catch (err) {
+        console.error(err);
+        toast("수정에 실패했습니다.");
+        btn.disabled = false;
+        btn.textContent = "💾 저장";
+      }
+    });
+
+    $("#editCancelBtn").addEventListener("click", () => {
+      detailEditing = false;
+      renderDetail();
+    });
   }
 
   function renderDetail() {
     const r = reportsCache.find((x) => String(x.id) === String(detailId));
     if (!r) return;
+    if (detailEditing && isMaster()) { renderDetailEdit(r); return; }
     const done = r.status === "조치완료";
     const assigned = !!(r.assignee && String(r.assignee).trim());
 
@@ -309,7 +393,11 @@
 
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
 
-      ${isMaster() ? '<button type="button" id="detailDeleteBtn" class="del-btn-wide">🗑 이 신고 삭제 (마스터 전용)</button>' : ""}
+      ${isMaster() ? `
+        <div class="master-actions">
+          <button type="button" id="detailEditBtn" class="edit-btn-wide">✏️ 신고내용 수정</button>
+          <button type="button" id="detailDeleteBtn" class="del-btn-wide">🗑 이 신고 삭제</button>
+        </div>` : ""}
     `;
 
     if (canManage()) {
@@ -343,6 +431,11 @@
     }
 
     if (isMaster()) {
+      $("#detailEditBtn").addEventListener("click", () => {
+        detailEditing = true;
+        renderDetail();
+      });
+
       $("#detailDeleteBtn").addEventListener("click", async () => {
         if (!confirm("이 신고를 완전히 삭제할까요? 되돌릴 수 없습니다.")) return;
         try {

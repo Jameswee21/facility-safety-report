@@ -401,6 +401,56 @@ body {
 }
 .pw-label { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
 
+/* 마스터 전용 액션 버튼 줄 */
+.master-actions { display: flex; gap: 8px; margin-top: 14px; }
+.master-actions button { margin-top: 0; flex: 1; }
+.edit-btn-wide {
+  background: #ecfeff;
+  border: 1px solid var(--primary);
+  color: var(--primary-dark);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.edit-btn-wide:hover { background: #cffafe; }
+
+/* 신고내용 수정 폼 */
+.edit-form label.pw-label { margin-top: 14px; }
+.edit-form label.pw-label:first-child { margin-top: 0; }
+.edit-form input, .edit-form select, .edit-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+}
+.edit-form textarea { resize: vertical; line-height: 1.6; }
+.edit-form input:focus, .edit-form select:focus, .edit-form textarea:focus {
+  outline: 2px solid var(--primary);
+  border-color: transparent;
+}
+.edit-btn-row { display: flex; gap: 8px; margin-top: 18px; }
+.save-btn, .cancel-btn {
+  flex: 1;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.save-btn { background: var(--primary); color: #fff; border: none; }
+.save-btn:hover:not(:disabled) { background: var(--primary-dark); }
+.save-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+.cancel-btn { background: var(--card); border: 1px solid var(--line); color: var(--text); }
+.cancel-btn:hover { background: var(--bg); }
+
 /* ========== 토스트 ========== */
 .toast {
   position: fixed;

@@ -127,6 +127,13 @@
       if ("assignee" in patch) row.assignee = patch.assignee;
       if ("status" in patch) row.status = patch.status;
       if ("completedAt" in patch) row.completed_at = patch.completedAt;
+      // 마스터 계정의 신고내용 수정 항목
+      if ("type" in patch) row.type = patch.type;
+      if ("location" in patch) row.location = patch.location;
+      if ("description" in patch) row.description = patch.description;
+      if ("contact" in patch) row.contact = patch.contact;
+      // 시간대 없는 현지 시각을 UTC로 변환해 저장 (신고 등록과 동일)
+      if ("occurredAt" in patch) row.occurred_at = new Date(patch.occurredAt).toISOString();
       const { error } = await this.client.from("reports").update(row).eq("id", id);
       if (error) throw error;
     },
