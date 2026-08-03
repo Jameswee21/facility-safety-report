@@ -315,6 +315,37 @@ textarea { resize: vertical; }
 }
 .done-check input { width: 22px; height: 22px; accent-color: var(--ok-text); }
 
+/* 업무의뢰 카톡 메시지 (마스터/시설팀장) */
+.kakao-box { margin-top: 12px; }
+.kakao-btn {
+  width: 100%;
+  background: #fee500;
+  color: #191919;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.kakao-btn:disabled { background: #e2e8f0; color: #94a3b8; }
+.kakao-hint { font-size: 12.5px; color: var(--muted); margin-top: 7px; line-height: 1.5; }
+.kakao-msg-wrap { margin-top: 10px; }
+.kakao-msg-wrap textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  background: #fffbeb;
+  color: var(--text);
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
 /* ---------- 건의함 ---------- */
 .suggest-form {
   background: var(--card);

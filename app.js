@@ -254,13 +254,25 @@
     const r = reportsCache.find((x) => String(x.id) === String(id));
     if (!r) return;
     const done = r.status === "조치완료";
+    const assigned = !!(r.assignee && String(r.assignee).trim());
 
     let adminHtml = "";
     if (adminMode) {
+      // 담당자 지정 + 업무의뢰 카톡 메시지는 마스터/시설팀장만
       const assignRow = canManage() ? `
         <div class="assignee-row">
           <input type="text" id="assigneeInput" placeholder="담당자 이름" value="${escapeHtml(r.assignee || "")}">
           <button type="button" id="assigneeSaveBtn">담당자 지정</button>
+        </div>` : "";
+      const kakaoBox = canManage() ? `
+        <div class="kakao-box">
+          <button type="button" id="kakaoGenBtn" class="kakao-btn" ${assigned ? "" : "disabled"}>💬 업무의뢰 카톡 메시지 생성</button>
+          ${assigned ? "" : '<p class="kakao-hint">담당자를 지정하면 카톡 메시지를 만들 수 있습니다.</p>'}
+          <div id="kakaoMsgWrap" class="kakao-msg-wrap hidden">
+            <textarea id="kakaoMsg" readonly rows="10"></textarea>
+            <button type="button" id="kakaoCopyBtn" class="kakao-btn">📋 메시지 복사하기</button>
+            <p class="kakao-hint">복사한 뒤 담당자와의 카카오톡 채팅방에 붙여넣어 전송하세요. 사진은 링크를 누르면 열립니다.</p>
+          </div>
         </div>` : "";
       adminHtml = `
       <div class="admin-panel">
@@ -270,6 +282,7 @@
           <input type="checkbox" id="doneCheck" ${done ? "checked" : ""}>
           <span>${done ? "조치완료됨 (해제하면 진행중으로 변경)" : "진행중 — 체크하면 조치완료 처리"}</span>
         </label>
+        ${kakaoBox}
       </div>`;
     }
 
@@ -290,15 +303,34 @@
     $("#detailModal").classList.remove("hidden");
 
     if (adminMode) {
-      if (canManage()) $("#assigneeSaveBtn").addEventListener("click", async () => {
-        const name = $("#assigneeInput").value.trim();
-        try {
-          await Store.updateReport(r.id, { assignee: name || null });
-          toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
-          closeDetail();
-          renderReports();
-        } catch (err) { console.error(err); toast("저장에 실패했습니다."); }
-      });
+      if (canManage()) {
+        $("#assigneeSaveBtn").addEventListener("click", async () => {
+          const name = $("#assigneeInput").value.trim();
+          try {
+            await Store.updateReport(r.id, { assignee: name || null });
+            toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+            // 목록 갱신 후 상세를 다시 열어 카톡 메시지 버튼 상태를 반영
+            await renderReports();
+            openDetail(r.id);
+          } catch (err) { console.error(err); toast("저장에 실패했습니다."); }
+        });
+
+        $("#kakaoGenBtn").addEventListener("click", () => {
+          $("#kakaoMsg").value = buildKakaoMsg(r);
+          $("#kakaoMsgWrap").classList.remove("hidden");
+        });
+
+        $("#kakaoCopyBtn").addEventListener("click", async () => {
+          const ok = await copyText($("#kakaoMsg").value);
+          if (ok) {
+            toast("메시지가 복사되었습니다. 카카오톡에 붙여넣으세요.");
+          } else {
+            $("#kakaoMsg").focus();
+            $("#kakaoMsg").select();
+            toast("메시지를 길게 눌러 복사해 주세요.");
+          }
+        });
+      }
 
       $("#doneCheck").addEventListener("change", async (e) => {
         const checked = e.target.checked;
@@ -312,6 +344,38 @@
           renderReports();
         } catch (err) { console.error(err); toast("저장에 실패했습니다."); }
       });
+    }
+  }
+
+  // 업무의뢰 카톡 메시지 (관리자 대시보드와 동일 형식)
+  function buildKakaoMsg(r) {
+    const photoLine = /^https?:/.test(r.photo || "")
+      ? `■ 현장사진: ${r.photo}`
+      : "■ 현장사진: 처리현황 화면에서 확인";
+    return [
+      "[시설 보수 업무의뢰]",
+      `■ 신고유형: ${r.type}`,
+      `■ 발생일시: ${fmtDateTime(r.occurredAt)}`,
+      `■ 발생위치: ${r.location}`,
+      `■ 상황설명: ${r.description}`,
+      `■ 담당자: ${r.assignee || ""}`,
+      photoLine,
+      `■ 처리현황 확인: ${new URL(".", location.href).href}`,
+      "",
+      "확인 후 조치 부탁드립니다. 조치 완료 시 위 링크의 '신고내역·처리현황'에서 관리자 모드로 완료 처리해 주세요."
+    ].join("\n");
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
     }
   }
 
