@@ -452,22 +452,43 @@
     if (e.target === $("#detailModal")) $("#detailModal").classList.add("hidden");
   });
 
-  // ---------- CSV 다운로드 ----------
+  // ---------- 엑셀 다운로드 (점검사항_조치현황 양식) ----------
+  function fmtDateDash(v) {
+    if (!v) return "";
+    const d = new Date(v);
+    if (isNaN(d)) return String(v);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   $("#csvBtn").addEventListener("click", () => {
-    const cols = ["접수일시", "발생일시", "신고유형", "발생위치", "상황설명", "담당자", "조치일", "상태", "연락처"];
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = applyFilters(reportsCache).map((r) => [
-      fmtDateTime(r.createdAt), fmtDateTime(r.occurredAt), r.type, r.location,
-      r.description, r.assignee || "", r.completedAt ? fmtDate(r.completedAt) : "", r.status, r.contact || ""
-    ].map(esc).join(","));
-    const csv = "﻿" + cols.map(esc).join(",") + "\r\n" + rows.join("\r\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    // 양식과 동일하게 발생일시 오름차순(오래된 순)으로 순번 부여
+    const list = applyFilters(reportsCache)
+      .slice()
+      .sort((a, b) => new Date(a.occurredAt) - new Date(b.occurredAt));
+
+    if (!list.length) return toast("내려받을 신고내역이 없습니다.");
+
+    // [순번, 점검사항, 발생위치, 발생일시, 조치일, 담당부서, 담당자, 비고]
+    const rows = list.map((r, i) => [
+      String(i + 1),
+      r.description || "",
+      r.location || "",
+      fmtDateDash(r.occurredAt),
+      fmtDateDash(r.completedAt),
+      "",                       // 담당부서: 시스템에 없는 항목이라 비워둠
+      r.assignee || "",
+      r.status || ""
+    ]);
+
     const d = new Date();
-    a.download = `신고처리현황_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.csv`;
+    const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const blob = window.makeReportXlsx(rows, "점검사항 조치 현황");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `점검사항_조치현황_${stamp}.xlsx`;
     a.click();
-    URL.revokeObjectURL(a.href);
-    toast("CSV 파일을 내려받았습니다.");
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast(`엑셀 파일을 내려받았습니다. (${rows.length}건)`);
   });
 
   // ---------- 안전 건의함 ----------
