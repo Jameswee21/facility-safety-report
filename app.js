@@ -65,6 +65,7 @@
   // ---------- 관리자 모드 (3단계 계정) ----------
   function refreshAdminUI() {
     $("#adminStateBar").classList.toggle("hidden", !adminMode);
+    $("#publicNotice").classList.toggle("hidden", adminMode);
     $("#adminStateText").textContent = adminMode ? `🔑 ${ROLE_NAMES[role]} 계정` : "";
     $("#adminBtn").textContent = adminMode ? "관리자 ✓" : "관리자";
   }
@@ -230,6 +231,13 @@
     }
     wrap.innerHTML = reportsCache.map((r) => {
       const done = r.status === "조치완료";
+      // 비로그인 사용자에게는 접수 여부와 처리 상태만 공개
+      const meta = adminMode
+        ? `<span>발생 ${fmtDateTime(r.occurredAt)}</span>
+           <span>담당자 ${escapeHtml(r.assignee || "미지정")}</span>
+           <span>조치일 ${r.completedAt ? fmtDate(r.completedAt) : "-"}</span>`
+        : `<span>발생 ${fmtDate(r.occurredAt)}</span>
+           <span>${done ? `조치 ${fmtDate(r.completedAt)}` : "처리 중"}</span>`;
       return `
       <div class="report-card" data-id="${escapeHtml(r.id)}">
         <div class="row1">
@@ -237,11 +245,7 @@
           <span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span>
         </div>
         <div class="loc">${escapeHtml(r.location)}</div>
-        <div class="meta">
-          <span>발생 ${fmtDateTime(r.occurredAt)}</span>
-          <span>담당자 ${escapeHtml(r.assignee || "미지정")}</span>
-          <span>조치일 ${r.completedAt ? fmtDate(r.completedAt) : "-"}</span>
-        </div>
+        <div class="meta">${meta}</div>
       </div>`;
     }).join("");
 
@@ -286,7 +290,8 @@
       </div>`;
     }
 
-    $("#detailBody").innerHTML = `
+    // 비로그인 사용자에게는 상황설명·사진·담당자·연락처를 공개하지 않음
+    $("#detailBody").innerHTML = adminMode ? `
       <table class="detail-table">
         <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
         <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
@@ -295,10 +300,21 @@
         <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
-        ${adminMode && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
+        ${r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
       ${adminHtml}
+    ` : `
+      <table class="detail-table">
+        <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
+        <tr><th>발생일시</th><td>${fmtDate(r.occurredAt)}</td></tr>
+        <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
+        <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
+      </table>
+      <p class="limited-notice">
+        상황설명·사진·담당자 등 상세 내용은 담당 직원(로그인)만 확인할 수 있습니다.
+      </p>
     `;
     $("#detailModal").classList.remove("hidden");
 

@@ -200,6 +200,27 @@ textarea { resize: vertical; }
   cursor: pointer;
 }
 
+/* 비로그인 사용자 안내 */
+.public-notice {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.limited-notice {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  text-align: center;
+}
+
 .report-list { display: flex; flex-direction: column; gap: 10px; }
 
 .report-card {
