@@ -97,6 +97,8 @@
     $("#roleBadge").textContent = `👤 ${ROLE_NAMES[role]}`;
     $("#csvBtn").classList.toggle("hidden", !canManage());
     $("#pwBtn").classList.toggle("hidden", !isMaster());
+    // 계정에 맞는 사용 매뉴얼로 연결
+    $("#manualLink").href = role === "staff" ? "manual-staff.html" : "manual-manager.html";
     startClock();
     loadReports();
     loadSuggestions();
