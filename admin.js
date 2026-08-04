@@ -29,6 +29,20 @@
     return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
   }
 
+  // 상태 3단계: 접수(담당자 미지정) → 진행중(담당자 지정) → 조치완료
+  function statusOf(r) {
+    if (r.status === "조치완료") return "조치완료";
+    return (r.assignee && String(r.assignee).trim()) ? "진행중" : "접수";
+  }
+  function statusClass(s) {
+    return s === "조치완료" ? "status-done" : s === "진행중" ? "status-progress" : "status-new";
+  }
+  // 담당자/완료 여부에 따라 저장할 상태값
+  function nextStatus(done, assignee) {
+    if (done) return "조치완료";
+    return (assignee && String(assignee).trim()) ? "진행중" : "접수";
+  }
+
   let toastTimer = null;
   function toast(msg) {
     const el = $("#toast");
@@ -127,8 +141,9 @@
         d.getDate() === today.getDate();
     };
     $("#statTotal").textContent = reportsCache.length;
-    $("#statProgress").textContent = reportsCache.filter((r) => r.status === "진행중").length;
-    $("#statDone").textContent = reportsCache.filter((r) => r.status === "조치완료").length;
+    $("#statNew").textContent = reportsCache.filter((r) => statusOf(r) === "접수").length;
+    $("#statProgress").textContent = reportsCache.filter((r) => statusOf(r) === "진행중").length;
+    $("#statDone").textContent = reportsCache.filter((r) => statusOf(r) === "조치완료").length;
     $("#statToday").textContent = reportsCache.filter((r) => isToday(r.createdAt)).length;
   }
 
@@ -137,7 +152,7 @@
     const ty = $("#filterType").value;
     const q = $("#filterSearch").value.trim().toLowerCase();
     return list.filter((r) => {
-      if (st && r.status !== st) return false;
+      if (st && statusOf(r) !== st) return false;
       if (ty && r.type !== ty) return false;
       if (q) {
         const hay = `${r.location} ${r.description} ${r.assignee || ""}`.toLowerCase();
@@ -153,7 +168,8 @@
     $("#reportEmpty").classList.toggle("hidden", list.length > 0);
 
     tbody.innerHTML = list.map((r) => {
-      const done = r.status === "조치완료";
+      const st = statusOf(r);
+      const done = st === "조치완료";
       return `
       <tr data-id="${escapeHtml(r.id)}">
         <td class="cell-datetime">${fmtDateTime(r.occurredAt)}</td>
@@ -173,7 +189,7 @@
             : escapeHtml(r.assignee || "미지정")}
         </td>
         <td class="cell-datetime">${r.completedAt ? fmtDate(r.completedAt) : "-"}</td>
-        <td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td>
+        <td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td>
         <td class="done-cell">
           <label><input type="checkbox" data-act="done" ${done ? "checked" : ""}><span>${done ? "완료됨" : "완료 처리"}</span></label>
         </td>
@@ -191,9 +207,14 @@
       const save = async () => {
         const name = input.value.trim();
         if (name === original.trim()) return;
+        const rec = reportsCache.find((x) => String(x.id) === String(id));
         try {
-          await Store.updateReport(id, { assignee: name || null });
-          toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+          await Store.updateReport(id, {
+            assignee: name || null,
+            // 담당자를 지정하면 진행중, 해제하면 접수로 되돌림 (완료 건은 유지)
+            status: nextStatus(statusOf(rec || {}) === "조치완료", name)
+          });
+          toast(name ? `담당자를 '${name}'(으)로 지정했습니다. (진행중)` : "담당자 지정을 해제했습니다.");
           loadReports(true);
         } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
       };
@@ -205,16 +226,18 @@
       const id = chk.closest("tr").dataset.id;
       chk.addEventListener("change", async () => {
         const checked = chk.checked;
-        if (!checked && !confirm("조치완료를 해제하고 '진행중'으로 되돌릴까요?")) {
+        const rec = reportsCache.find((x) => String(x.id) === String(id));
+        const back = nextStatus(false, rec && rec.assignee);
+        if (!checked && !confirm(`조치완료를 해제하고 '${back}'(으)로 되돌릴까요?`)) {
           chk.checked = true;
           return;
         }
         try {
           await Store.updateReport(id, {
-            status: checked ? "조치완료" : "진행중",
+            status: checked ? "조치완료" : back,
             completedAt: checked ? new Date().toISOString().slice(0, 10) : null
           });
-          toast(checked ? "조치완료 처리되었습니다. (조치일 자동 입력)" : "진행중으로 변경되었습니다.");
+          toast(checked ? "조치완료 처리되었습니다. (조치일 자동 입력)" : `${back}(으)로 변경되었습니다.`);
           loadReports(true);
         } catch (err) { console.error(err); toast("상태 변경에 실패했습니다."); }
       });
@@ -355,7 +378,8 @@
     const r = reportsCache.find((x) => String(x.id) === String(detailId));
     if (!r) return;
     if (detailEditing && isMaster()) { renderDetailEdit(r); return; }
-    const done = r.status === "조치완료";
+    const st = statusOf(r);
+    const done = st === "조치완료";
     const assigned = !!(r.assignee && String(r.assignee).trim());
 
     $("#detailTitleTag").textContent = assigned ? "" : "(담당자 지정 필요)";
@@ -385,7 +409,7 @@
         <tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>
         <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
-        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
         <tr><th>접수일시</th><td>${fmtDateTime(r.createdAt)}</td></tr>
       </table>
 
@@ -404,9 +428,11 @@
       $("#detailAssignSave").addEventListener("click", async () => {
         const name = $("#detailAssignee").value.trim();
         try {
-          await Store.updateReport(r.id, { assignee: name || null });
+          const st2 = nextStatus(done, name);
+          await Store.updateReport(r.id, { assignee: name || null, status: st2 });
           r.assignee = name || null;
-          toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+          r.status = st2;
+          toast(name ? `담당자를 '${name}'(으)로 지정했습니다. (진행중)` : "담당자 지정을 해제했습니다.");
           renderDetail();
           renderTable();
         } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
@@ -477,7 +503,7 @@
       fmtDateDash(r.completedAt),
       "",                       // 담당부서: 시스템에 없는 항목이라 비워둠
       r.assignee || "",
-      r.status || ""
+      statusOf(r)
     ]);
 
     const d = new Date();

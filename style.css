@@ -246,6 +246,7 @@ textarea { resize: vertical; }
   padding: 3px 10px;
 }
 .status-badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+.status-new { background: #e0f2fe; color: #0369a1; }
 .status-progress { background: var(--warn-bg); color: var(--warn-text); }
 .status-done { background: var(--ok-bg); color: var(--ok-text); }
 

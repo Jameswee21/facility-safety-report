@@ -37,6 +37,20 @@
     return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
   }
 
+  // 상태 3단계: 접수(담당자 미지정) → 진행중(담당자 지정) → 조치완료
+  function statusOf(r) {
+    if (r.status === "조치완료") return "조치완료";
+    return (r.assignee && String(r.assignee).trim()) ? "진행중" : "접수";
+  }
+  function statusClass(s) {
+    return s === "조치완료" ? "status-done" : s === "진행중" ? "status-progress" : "status-new";
+  }
+  // 담당자/완료 여부에 따라 저장할 상태값
+  function nextStatus(done, assignee) {
+    if (done) return "조치완료";
+    return (assignee && String(assignee).trim()) ? "진행중" : "접수";
+  }
+
   let toastTimer = null;
   function toast(msg) {
     const el = $("#toast");
@@ -191,7 +205,7 @@
         contact: contact || null,
         consent: !!contact,
         assignee: null,
-        status: "진행중",
+        status: "접수",
         completedAt: null,
         createdAt: new Date().toISOString()
       });
@@ -230,19 +244,20 @@
       return;
     }
     wrap.innerHTML = reportsCache.map((r) => {
-      const done = r.status === "조치완료";
+      const st = statusOf(r);
+      const done = st === "조치완료";
       // 비로그인 사용자에게는 접수 여부와 처리 상태만 공개
       const meta = adminMode
         ? `<span>발생 ${fmtDateTime(r.occurredAt)}</span>
            <span>담당자 ${escapeHtml(r.assignee || "미지정")}</span>
            <span>조치일 ${r.completedAt ? fmtDate(r.completedAt) : "-"}</span>`
         : `<span>발생 ${fmtDate(r.occurredAt)}</span>
-           <span>${done ? `조치 ${fmtDate(r.completedAt)}` : "처리 중"}</span>`;
+           <span>${done ? `조치 ${fmtDate(r.completedAt)}` : st === "진행중" ? "처리 중" : "접수됨"}</span>`;
       return `
       <div class="report-card" data-id="${escapeHtml(r.id)}">
         <div class="row1">
           <span class="type-badge">${escapeHtml(r.type)}</span>
-          <span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span>
+          <span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span>
         </div>
         <div class="loc">${escapeHtml(r.location)}</div>
         <div class="meta">${meta}</div>
@@ -257,7 +272,8 @@
   function openDetail(id) {
     const r = reportsCache.find((x) => String(x.id) === String(id));
     if (!r) return;
-    const done = r.status === "조치완료";
+    const st = statusOf(r);
+    const done = st === "조치완료";
     const assigned = !!(r.assignee && String(r.assignee).trim());
 
     let adminHtml = "";
@@ -305,7 +321,7 @@
         <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
         <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
-        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
         ${r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
       <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
@@ -316,7 +332,7 @@
         <tr><th>발생일시</th><td>${fmtDate(r.occurredAt)}</td></tr>
         <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
         <tr><th>상황설명</th><td>${escapeHtml(shortDesc)}</td></tr>
-        <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
       </table>
       <p class="limited-notice">
@@ -330,8 +346,11 @@
         $("#assigneeSaveBtn").addEventListener("click", async () => {
           const name = $("#assigneeInput").value.trim();
           try {
-            await Store.updateReport(r.id, { assignee: name || null });
-            toast(name ? `담당자를 '${name}'(으)로 지정했습니다.` : "담당자 지정을 해제했습니다.");
+            await Store.updateReport(r.id, {
+              assignee: name || null,
+              status: nextStatus(done, name)   // 담당자 지정 시 진행중, 해제 시 접수
+            });
+            toast(name ? `담당자를 '${name}'(으)로 지정했습니다. (진행중)` : "담당자 지정을 해제했습니다.");
             // 목록 갱신 후 상세를 다시 열어 카톡 메시지 버튼 상태를 반영
             await renderReports();
             openDetail(r.id);
@@ -358,11 +377,12 @@
       $("#doneCheck").addEventListener("change", async (e) => {
         const checked = e.target.checked;
         try {
+          const back = nextStatus(false, r.assignee);
           await Store.updateReport(r.id, {
-            status: checked ? "조치완료" : "진행중",
+            status: checked ? "조치완료" : back,
             completedAt: checked ? new Date().toISOString().slice(0, 10) : null
           });
-          toast(checked ? "조치완료 처리되었습니다. (조치일 자동 입력)" : "진행중으로 변경되었습니다.");
+          toast(checked ? "조치완료 처리되었습니다. (조치일 자동 입력)" : `${back}(으)로 변경되었습니다.`);
           closeDetail();
           renderReports();
         } catch (err) { console.error(err); toast("저장에 실패했습니다."); }

@@ -118,7 +118,7 @@ body {
 .content { max-width: 1280px; margin: 0 auto; padding: 22px 24px 60px; }
 
 /* 통계 카드 */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
 .stat-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -126,6 +126,7 @@ body {
   padding: 18px 20px;
   border-left: 5px solid var(--primary);
 }
+.stat-card.new { border-left-color: #0ea5e9; }
 .stat-card.warn { border-left-color: #f59e0b; }
 .stat-card.ok { border-left-color: #22c55e; }
 .stat-card.info { border-left-color: #3b82f6; }
@@ -216,6 +217,7 @@ body {
   padding: 3px 11px;
   white-space: nowrap;
 }
+.status-new { background: #e0f2fe; color: #0369a1; }
 .status-progress { background: var(--warn-bg); color: var(--warn-text); }
 .status-done { background: var(--ok-bg); color: var(--ok-text); }
 
