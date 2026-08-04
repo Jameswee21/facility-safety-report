@@ -245,6 +245,39 @@
   });
 
   // ---------- 신고내역 확인 및 처리현황 ----------
+  const PAGE_SIZE = 20;
+  let listFilter = "";   // "" | 접수 | 진행중 | 조치완료
+  let listQuery = "";
+  let listLimit = PAGE_SIZE;
+
+  // 발생일시 최신순 정렬 + 상태/검색어 필터
+  function visibleReports() {
+    const q = listQuery.trim().toLowerCase();
+    return reportsCache
+      .filter((r) => {
+        if (listFilter && statusOf(r) !== listFilter) return false;
+        if (q) {
+          const hay = `${r.location || ""} ${r.description || ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+  }
+
+  function refreshChips() {
+    const counts = { "": reportsCache.length };
+    ["접수", "진행중", "조치완료"].forEach((s) => {
+      counts[s] = reportsCache.filter((r) => statusOf(r) === s).length;
+    });
+    document.querySelectorAll("#statusChips .chip").forEach((c) => {
+      const st = c.dataset.st;
+      const label = st || "전체";
+      c.textContent = `${label} ${counts[st] || 0}`;
+      c.classList.toggle("active", st === listFilter);
+    });
+  }
+
   async function renderReports() {
     const wrap = $("#reportList");
     wrap.innerHTML = '<div class="empty-msg">불러오는 중...</div>';
@@ -255,11 +288,32 @@
       wrap.innerHTML = '<div class="empty-msg">신고내역을 불러오지 못했습니다.</div>';
       return;
     }
+    refreshChips();
     if (!reportsCache.length) {
       wrap.innerHTML = '<div class="empty-msg">아직 접수된 신고가 없습니다.</div>';
+      $("#moreBtn").classList.add("hidden");
       return;
     }
-    wrap.innerHTML = reportsCache.map((r) => {
+    renderList();
+  }
+
+  function renderList() {
+    const wrap = $("#reportList");
+    const all = visibleReports();
+    const shown = all.slice(0, listLimit);
+
+    if (!all.length) {
+      wrap.innerHTML = '<div class="empty-msg">조건에 맞는 신고가 없습니다.</div>';
+      $("#moreBtn").classList.add("hidden");
+      return;
+    }
+
+    const rest = all.length - shown.length;
+    const more = $("#moreBtn");
+    more.classList.toggle("hidden", rest <= 0);
+    more.textContent = `더 보기 (${shown.length}/${all.length}건)`;
+
+    wrap.innerHTML = shown.map((r) => {
       const st = statusOf(r);
       const done = st === "조치완료";
       // 비로그인 사용자에게는 접수 여부와 처리 상태만 공개
@@ -284,6 +338,40 @@
       card.addEventListener("click", () => openDetail(card.dataset.id))
     );
   }
+
+  // 상태 칩 / 검색 / 더 보기 / 맨 위로
+  document.querySelectorAll("#statusChips .chip").forEach((c) =>
+    c.addEventListener("click", () => {
+      listFilter = c.dataset.st;
+      listLimit = PAGE_SIZE;
+      refreshChips();
+      renderList();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    })
+  );
+
+  let searchTimer = null;
+  $("#listSearch").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      listQuery = e.target.value;
+      listLimit = PAGE_SIZE;
+      renderList();
+    }, 200);
+  });
+
+  $("#moreBtn").addEventListener("click", () => {
+    listLimit += PAGE_SIZE;
+    renderList();
+  });
+
+  $("#toTopBtn").addEventListener("click", () =>
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  );
+
+  window.addEventListener("scroll", () => {
+    $("#toTopBtn").classList.toggle("hidden", window.scrollY < 400);
+  }, { passive: true });
 
   let detailId = null;
   let detailEditing = false;
