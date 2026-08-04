@@ -264,6 +264,38 @@ body {
 
 .empty { text-align: center; color: var(--muted); padding: 48px 0; font-size: 14px; }
 
+/* ========== 페이지 나누기 ========== */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.pager-info { font-size: 13px; color: var(--muted); font-weight: 600; }
+.pager-btns { display: flex; align-items: center; gap: 4px; }
+.pager button, .pager select {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.pager button:hover:not(:disabled) { background: #f0f9ff; border-color: var(--primary); }
+.pager button:disabled { color: #cbd5e1; cursor: not-allowed; }
+#pageNums { display: inline-flex; gap: 4px; margin: 0 4px; }
+.page-num { min-width: 34px; text-align: center; }
+.page-num.current {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff;
+  font-weight: 700;
+}
+
 /* ========== 상세 모달 ========== */
 .modal {
   position: fixed;

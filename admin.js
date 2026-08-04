@@ -147,25 +147,82 @@
     $("#statToday").textContent = reportsCache.filter((r) => isToday(r.createdAt)).length;
   }
 
+  // 필터 + 발생일시 최신순 정렬
   function applyFilters(list) {
     const st = $("#filterStatus").value;
     const ty = $("#filterType").value;
     const q = $("#filterSearch").value.trim().toLowerCase();
-    return list.filter((r) => {
-      if (st && statusOf(r) !== st) return false;
-      if (ty && r.type !== ty) return false;
-      if (q) {
-        const hay = `${r.location} ${r.description} ${r.assignee || ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
+    return list
+      .filter((r) => {
+        if (st && statusOf(r) !== st) return false;
+        if (ty && r.type !== ty) return false;
+        if (q) {
+          const hay = `${r.location} ${r.description} ${r.assignee || ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
   }
+
+  // ---------- 페이지 나누기 ----------
+  let page = 1;
+  let pageSize = 25;
+
+  function renderPager(total, from, to) {
+    $("#pagerInfo").textContent = total
+      ? `총 ${total}건 중 ${from + 1}–${to}번째 표시`
+      : "표시할 신고가 없습니다";
+
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    $("#firstPage").disabled = $("#prevPage").disabled = page <= 1;
+    $("#lastPage").disabled = $("#nextPage").disabled = page >= pages;
+
+    // 현재 페이지 주변으로 최대 7개 번호 표시
+    let start = Math.max(1, page - 3);
+    const end = Math.min(pages, start + 6);
+    start = Math.max(1, end - 6);
+    let html = "";
+    for (let p = start; p <= end; p++) {
+      html += `<button type="button" class="page-num ${p === page ? "current" : ""}" data-page="${p}">${p}</button>`;
+    }
+    $("#pageNums").innerHTML = html;
+    $("#pageNums").querySelectorAll(".page-num").forEach((b) =>
+      b.addEventListener("click", () => goPage(Number(b.dataset.page)))
+    );
+  }
+
+  function goPage(p) {
+    page = p;
+    renderTable();
+    $("#panel-reports").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  $("#firstPage").addEventListener("click", () => goPage(1));
+  $("#prevPage").addEventListener("click", () => goPage(page - 1));
+  $("#nextPage").addEventListener("click", () => goPage(page + 1));
+  $("#lastPage").addEventListener("click", () => {
+    const pages = Math.max(1, Math.ceil(applyFilters(reportsCache).length / pageSize));
+    goPage(pages);
+  });
+  $("#pageSize").addEventListener("change", (e) => {
+    pageSize = Number(e.target.value);
+    page = 1;
+    renderTable();
+  });
 
   function renderTable() {
     const tbody = $("#reportTbody");
-    const list = applyFilters(reportsCache);
-    $("#reportEmpty").classList.toggle("hidden", list.length > 0);
+    const all = applyFilters(reportsCache);
+    $("#reportEmpty").classList.toggle("hidden", all.length > 0);
+
+    // 삭제·필터로 건수가 줄면 마지막 페이지로 보정
+    const pages = Math.max(1, Math.ceil(all.length / pageSize));
+    if (page > pages) page = pages;
+    const from = (page - 1) * pageSize;
+    const to = Math.min(from + pageSize, all.length);
+    const list = all.slice(from, to);
+    renderPager(all.length, from, to);
 
     tbody.innerHTML = list.map((r) => {
       const st = statusOf(r);
@@ -244,10 +301,12 @@
     });
   }
 
+  // 필터가 바뀌면 첫 페이지부터 다시 표시
+  const filterChanged = () => { page = 1; renderTable(); };
   ["filterStatus", "filterType"].forEach((id) =>
-    $("#" + id).addEventListener("change", renderTable)
+    $("#" + id).addEventListener("change", filterChanged)
   );
-  $("#filterSearch").addEventListener("input", renderTable);
+  $("#filterSearch").addEventListener("input", filterChanged);
   $("#refreshBtn").addEventListener("click", () => { loadReports(); toast("새로고침했습니다."); });
 
   // ---------- 상세 모달 ----------

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e7490">
 <title>신고 처리현황 관리자 대시보드</title>
-<link rel="stylesheet" href="admin.css?v=6">
+<link rel="stylesheet" href="admin.css?v=7">
 </head>
 <body>
 
@@ -98,6 +98,22 @@
         </table>
         <div id="reportEmpty" class="empty hidden">표시할 신고가 없습니다.</div>
       </div>
+
+      <div class="pager" id="pager">
+        <span class="pager-info" id="pagerInfo"></span>
+        <div class="pager-btns">
+          <button type="button" id="firstPage" title="첫 페이지">«</button>
+          <button type="button" id="prevPage">‹ 이전</button>
+          <span id="pageNums"></span>
+          <button type="button" id="nextPage">다음 ›</button>
+          <button type="button" id="lastPage" title="마지막 페이지">»</button>
+        </div>
+        <select id="pageSize" title="한 페이지에 표시할 건수">
+          <option value="25">25건씩</option>
+          <option value="50">50건씩</option>
+          <option value="100">100건씩</option>
+        </select>
+      </div>
     </section>
 
     <!-- ===== 안전 건의함 ===== -->
@@ -155,6 +171,6 @@
 <script src="config.js?v=4"></script>
 <script src="storage.js?v=4"></script>
 <script src="xlsx.js?v=1"></script>
-<script src="admin.js?v=10"></script>
+<script src="admin.js?v=11"></script>
 </body>
 </html>
