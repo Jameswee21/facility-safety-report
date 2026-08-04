@@ -11,6 +11,14 @@
   sessionStorage.removeItem("fs_admin"); // 이전 버전 세션 정리
   let adminMode = !!role;
   const canManage = () => role === "master" || role === "manager";
+  const isMaster = () => role === "master";
+
+  const REPORT_TYPES = [
+    "유해 위험 요소(아차사고 포함)",
+    "시설파손/고장",
+    "위생/환경",
+    "기타"
+  ];
   let reportsCache = [];
   let photoDataUrl = null;
 
@@ -35,6 +43,14 @@
     if (isNaN(d)) return String(v);
     const p = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+  }
+
+  // DB의 UTC 값을 datetime-local 입력용 현지 시각 문자열로 변환
+  function toLocalInput(v) {
+    const d = new Date(v);
+    if (isNaN(d)) return "";
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
   // 상태 3단계: 접수(담당자 미지정) → 진행중(담당자 지정) → 조치완료
@@ -269,9 +285,91 @@
     );
   }
 
+  let detailId = null;
+  let detailEditing = false;
+
   function openDetail(id) {
-    const r = reportsCache.find((x) => String(x.id) === String(id));
+    detailId = id;
+    detailEditing = false;
+    renderDetail();
+    $("#detailModal").classList.remove("hidden");
+  }
+
+  // 마스터 전용: 신고내용 수정 화면
+  function renderDetailEdit(r) {
+    $("#detailBody").innerHTML = `
+      <div class="edit-form">
+        <div class="field">
+          <label class="field-label">신고유형</label>
+          <select id="editType">
+            ${REPORT_TYPES.map((t) =>
+              `<option value="${escapeHtml(t)}" ${t === r.type ? "selected" : ""}>${escapeHtml(t)}</option>`
+            ).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">발생일시</label>
+          <input type="datetime-local" id="editOccurredAt" value="${toLocalInput(r.occurredAt)}">
+        </div>
+        <div class="field">
+          <label class="field-label">발생위치</label>
+          <input type="text" id="editLocation" value="${escapeHtml(r.location || "")}">
+        </div>
+        <div class="field">
+          <label class="field-label">상황설명</label>
+          <textarea id="editDescription" rows="5">${escapeHtml(r.description || "")}</textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">연락처 <span class="opt">(비우면 삭제)</span></label>
+          <input type="tel" id="editContact" value="${escapeHtml(r.contact || "")}">
+        </div>
+        <div class="btn-row">
+          <button type="button" id="editSaveBtn" class="primary-btn">💾 저장</button>
+          <button type="button" id="editCancelBtn" class="ghost-btn">취소</button>
+        </div>
+        <p class="kakao-hint">사진은 수정할 수 없습니다.</p>
+      </div>
+    `;
+
+    $("#editSaveBtn").addEventListener("click", async () => {
+      const type = $("#editType").value;
+      const occurredAt = $("#editOccurredAt").value;
+      const location = $("#editLocation").value.trim();
+      const description = $("#editDescription").value.trim();
+      const contact = $("#editContact").value.trim();
+      if (!occurredAt) return toast("발생일시를 입력해 주세요.");
+      if (!location) return toast("발생위치를 입력해 주세요.");
+      if (!description) return toast("상황설명을 입력해 주세요.");
+
+      const btn = $("#editSaveBtn");
+      btn.disabled = true;
+      btn.textContent = "저장 중...";
+      try {
+        await Store.updateReport(r.id, {
+          type, occurredAt, location, description, contact: contact || null
+        });
+        await renderReports();
+        detailEditing = false;
+        renderDetail();
+        toast("신고내용이 수정되었습니다.");
+      } catch (err) {
+        console.error(err);
+        toast("수정에 실패했습니다.");
+        btn.disabled = false;
+        btn.textContent = "💾 저장";
+      }
+    });
+
+    $("#editCancelBtn").addEventListener("click", () => {
+      detailEditing = false;
+      renderDetail();
+    });
+  }
+
+  function renderDetail() {
+    const r = reportsCache.find((x) => String(x.id) === String(detailId));
     if (!r) return;
+    if (detailEditing && isMaster()) { renderDetailEdit(r); return; }
     const st = statusOf(r);
     const done = st === "조치완료";
     const assigned = !!(r.assignee && String(r.assignee).trim());
@@ -294,6 +392,10 @@
             <p class="kakao-hint">복사한 뒤 담당자와의 카카오톡 채팅방에 붙여넣어 전송하세요. 사진은 링크를 누르면 열립니다.</p>
           </div>
         </div>` : "";
+      // 신고내용 수정은 마스터만
+      const editBtn = isMaster()
+        ? '<button type="button" id="detailEditBtn" class="edit-btn-wide">✏️ 신고내용 수정</button>'
+        : "";
       adminHtml = `
       <div class="admin-panel">
         <h4>🔑 ${ROLE_NAMES[role]} 처리</h4>
@@ -303,6 +405,7 @@
           <span>${done ? "조치완료됨 (해제하면 진행중으로 변경)" : "진행중 — 체크하면 조치완료 처리"}</span>
         </label>
         ${kakaoBox}
+        ${editBtn}
       </div>`;
     }
 
@@ -342,6 +445,13 @@
     $("#detailModal").classList.remove("hidden");
 
     if (adminMode) {
+      if (isMaster()) {
+        $("#detailEditBtn").addEventListener("click", () => {
+          detailEditing = true;
+          renderDetail();
+        });
+      }
+
       if (canManage()) {
         $("#assigneeSaveBtn").addEventListener("click", async () => {
           const name = $("#assigneeInput").value.trim();
