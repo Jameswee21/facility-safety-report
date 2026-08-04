@@ -290,7 +290,13 @@
       </div>`;
     }
 
-    // 비로그인 사용자에게는 상황설명·사진·담당자·연락처를 공개하지 않음
+    // 비로그인 사용자에게 보여줄 상황설명 요약 (줄바꿈 제거 후 40자까지)
+    const shortDesc = (() => {
+      const s = String(r.description || "").replace(/\s+/g, " ").trim();
+      return s.length > 40 ? s.slice(0, 40) + "…" : s;
+    })();
+
+    // 비로그인 사용자에게는 사진·담당자·연락처와 상세 설명을 공개하지 않음
     $("#detailBody").innerHTML = adminMode ? `
       <table class="detail-table">
         <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
@@ -309,11 +315,12 @@
         <tr><th>신고유형</th><td>${escapeHtml(r.type)}</td></tr>
         <tr><th>발생일시</th><td>${fmtDate(r.occurredAt)}</td></tr>
         <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
+        <tr><th>상황설명</th><td>${escapeHtml(shortDesc)}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${done ? "status-done" : "status-progress"}">${escapeHtml(r.status)}</span></td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
       </table>
       <p class="limited-notice">
-        상황설명·사진·담당자 등 상세 내용은 담당 직원(로그인)만 확인할 수 있습니다.
+        전체 상황설명·사진·담당자 등 상세 내용은 담당 직원(로그인)만 확인할 수 있습니다.
       </p>
     `;
     $("#detailModal").classList.remove("hidden");
