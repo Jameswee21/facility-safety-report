@@ -131,23 +131,27 @@
     renderTable();
   }
 
-  function renderStats() {
+  // 접수일시(UTC 저장)를 이 컴퓨터의 현지 시간대로 변환해 오늘 여부 판단
+  function isToday(v) {
+    if (!v) return false;
+    const d = new Date(v);
     const today = new Date();
-    // 접수일시(UTC 저장)를 이 컴퓨터의 현지 시간대로 변환해 오늘 여부 판단
-    const isToday = (v) => {
-      if (!v) return false;
-      const d = new Date(v);
-      return !isNaN(d) &&
-        d.getFullYear() === today.getFullYear() &&
-        d.getMonth() === today.getMonth() &&
-        d.getDate() === today.getDate();
-    };
+    return !isNaN(d) &&
+      d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate();
+  }
+
+  function renderStats() {
     $("#statTotal").textContent = reportsCache.length;
     $("#statNew").textContent = reportsCache.filter((r) => statusOf(r) === "접수").length;
     $("#statProgress").textContent = reportsCache.filter((r) => statusOf(r) === "진행중").length;
     $("#statDone").textContent = reportsCache.filter((r) => statusOf(r) === "조치완료").length;
     $("#statToday").textContent = reportsCache.filter((r) => isToday(r.createdAt)).length;
   }
+
+  // 통계 카드 「오늘 접수」를 선택했을 때만 true
+  let todayOnly = false;
 
   // 필터 + 발생일시 최신순 정렬
   function applyFilters(list) {
@@ -156,6 +160,7 @@
     const q = $("#filterSearch").value.trim().toLowerCase();
     return list
       .filter((r) => {
+        if (todayOnly && !isToday(r.createdAt)) return false;
         if (st && statusOf(r) !== st) return false;
         if (ty && r.type !== ty) return false;
         if (q) {
@@ -304,11 +309,43 @@
   }
 
   // 필터가 바뀌면 첫 페이지부터 다시 표시
-  const filterChanged = () => { page = 1; renderTable(); };
+  const filterChanged = () => {
+    todayOnly = false;
+    page = 1;
+    renderTable();
+    syncStatCards();
+  };
   ["filterStatus", "filterType"].forEach((id) =>
     $("#" + id).addEventListener("change", filterChanged)
   );
   $("#filterSearch").addEventListener("input", filterChanged);
+
+  // ---------- 통계 카드 클릭 → 해당 목록만 표시 ----------
+  function syncStatCards() {
+    const cur = todayOnly ? "today" : $("#filterStatus").value;
+    document.querySelectorAll(".stat-card[data-filter]").forEach((c) =>
+      c.classList.toggle("active", c.dataset.filter === cur)
+    );
+  }
+
+  document.querySelectorAll(".stat-card[data-filter]").forEach((c) =>
+    c.addEventListener("click", () => {
+      const v = c.dataset.filter;
+      if (v === "today") {
+        todayOnly = true;
+        $("#filterStatus").value = "";
+      } else {
+        todayOnly = false;
+        $("#filterStatus").value = v;   // "" 이면 전체
+      }
+      page = 1;
+      // 건의함 탭을 보고 있었다면 신고내역 탭으로 이동
+      document.querySelector('.page-tab[data-tab="reports"]').click();
+      renderTable();
+      syncStatCards();
+      $("#panel-reports").scrollIntoView({ behavior: "smooth", block: "start" });
+    })
+  );
   $("#refreshBtn").addEventListener("click", () => { loadReports(); toast("새로고침했습니다."); });
 
   // ---------- 상세 모달 ----------

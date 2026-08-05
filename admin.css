@@ -125,7 +125,18 @@ body {
   border-radius: 14px;
   padding: 18px 20px;
   border-left: 5px solid var(--primary);
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+  user-select: none;
 }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15,23,42,.1); }
+/* 선택된 카드 강조 */
+.stat-card.active {
+  background: #f0f9ff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary) inset;
+}
+.stat-card.active .stat-label { color: var(--primary-dark); }
 .stat-card.new { border-left-color: #0ea5e9; }
 .stat-card.warn { border-left-color: #f59e0b; }
 .stat-card.ok { border-left-color: #22c55e; }

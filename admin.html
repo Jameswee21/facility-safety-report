@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e7490">
 <title>신고 처리현황 관리자 대시보드</title>
-<link rel="stylesheet" href="admin.css?v=7">
+<link rel="stylesheet" href="admin.css?v=8">
 </head>
 <body>
 
@@ -48,11 +48,11 @@
 
     <!-- 통계 카드 -->
     <section class="stats" id="statsRow">
-      <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">전체 신고</div></div>
-      <div class="stat-card new"><div class="stat-num" id="statNew">0</div><div class="stat-label">접수 (담당자 미지정)</div></div>
-      <div class="stat-card warn"><div class="stat-num" id="statProgress">0</div><div class="stat-label">진행중</div></div>
-      <div class="stat-card ok"><div class="stat-num" id="statDone">0</div><div class="stat-label">조치완료</div></div>
-      <div class="stat-card info"><div class="stat-num" id="statToday">0</div><div class="stat-label">오늘 접수</div></div>
+      <div class="stat-card active" data-filter="" title="전체 신고 보기"><div class="stat-num" id="statTotal">0</div><div class="stat-label">전체 신고</div></div>
+      <div class="stat-card new" data-filter="접수" title="접수 건만 보기"><div class="stat-num" id="statNew">0</div><div class="stat-label">접수 (담당자 미지정)</div></div>
+      <div class="stat-card warn" data-filter="진행중" title="진행중 건만 보기"><div class="stat-num" id="statProgress">0</div><div class="stat-label">진행중</div></div>
+      <div class="stat-card ok" data-filter="조치완료" title="조치완료 건만 보기"><div class="stat-num" id="statDone">0</div><div class="stat-label">조치완료</div></div>
+      <div class="stat-card info" data-filter="today" title="오늘 접수된 건만 보기"><div class="stat-num" id="statToday">0</div><div class="stat-label">오늘 접수</div></div>
     </section>
 
     <!-- 탭: 신고내역 / 안전 건의함 -->
@@ -172,6 +172,6 @@
 <script src="config.js?v=4"></script>
 <script src="storage.js?v=4"></script>
 <script src="xlsx.js?v=1"></script>
-<script src="admin.js?v=12"></script>
+<script src="admin.js?v=13"></script>
 </body>
 </html>
