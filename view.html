@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e7490">
+<title>신고 상세 | 시설 보수 신고</title>
+<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="view.css?v=1">
+</head>
+<body class="view-page">
+
+<header class="app-header">
+  <h1>시설 보수 업무의뢰</h1>
+  <a href="index.html" class="admin-btn">목록 보기</a>
+</header>
+
+<main class="view-main">
+  <div id="viewBody">
+    <p class="empty-msg">불러오는 중...</p>
+  </div>
+</main>
+
+<!-- 사진 원본 보기 -->
+<div id="photoModal" class="photo-modal hidden">
+  <button id="photoCloseBtn" class="photo-close" type="button">✕</button>
+  <img id="photoFull" alt="현장 사진 원본">
+</div>
+
+<!-- 로그인 창 -->
+<div id="loginModal" class="modal hidden">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <h3>🔑 관리자 로그인</h3>
+      <button id="loginCloseBtn" class="close-btn" type="button">✕</button>
+    </div>
+    <form id="mLoginForm" class="modal-body">
+      <p class="login-hint">조치완료 처리를 하려면 로그인이 필요합니다.<br>담당자 공용 비밀번호를 입력하세요.</p>
+      <input type="text" id="mLoginCode" class="masked" inputmode="numeric"
+             autocomplete="off" placeholder="비밀번호">
+      <label class="remember"><input type="checkbox" id="mRemember" checked><span>로그인 상태 유지</span></label>
+      <p id="mLoginError" class="login-error hidden">비밀번호가 올바르지 않습니다.</p>
+      <button type="submit" class="primary-btn">로그인</button>
+      <p class="remember-note">공용 기기에서는 「로그인 상태 유지」를 체크하지 마세요.</p>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="config.js?v=4"></script>
+<script src="storage.js?v=5"></script>
+<script src="view.js?v=1"></script>
+</body>
+</html>

@@ -22,6 +22,9 @@
     _set(key, list) { localStorage.setItem(key, JSON.stringify(list)); },
 
     async listReports() { return this._get("fs_reports"); },
+    async getReport(id) {
+      return this._get("fs_reports").find((x) => String(x.id) === String(id)) || null;
+    },
     async addReport(r) {
       const list = this._get("fs_reports");
       list.unshift(r);
@@ -96,6 +99,13 @@
         .from("reports").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data.map(this._fromRow);
+    },
+
+    async getReport(id) {
+      const { data, error } = await this.client
+        .from("reports").select("*").eq("id", id).maybeSingle();
+      if (error) throw error;
+      return data ? this._fromRow(data) : null;
     },
 
     async addReport(r) {

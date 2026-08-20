@@ -383,22 +383,22 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  // 카톡 메시지: 링크 하나로 사진 확인과 조치완료 처리까지 되도록 짧게
   function buildKakaoMsg(r) {
-    const photoLine = /^https?:/.test(r.photo || "")
-      ? `■ 현장사진: ${r.photo}`
-      : "■ 현장사진: 관리자 대시보드에서 확인";
+    const brief = (() => {
+      const s = String(r.description || "").replace(/\s+/g, " ").trim();
+      return s.length > 60 ? s.slice(0, 60) + "…" : s;
+    })();
+    const link = new URL("view.html?id=" + encodeURIComponent(r.id), location.href).href;
     return [
       "[시설 보수 업무의뢰]",
-      `■ 신고유형: ${r.type}`,
-      `■ 발생일시: ${fmtDateTime(r.occurredAt)}`,
-      `■ 발생위치: ${r.location}`,
-      `■ 상황설명: ${r.description}`,
-      `■ 담당자: ${r.assignee || ""}`,
-      photoLine,
-      // 담당자는 주로 휴대폰으로 확인하므로 모바일용 신고 사이트로 연결
-      `■ 처리현황 확인: ${new URL(".", location.href).href}`,
+      `· 위치 : ${r.location}`,
+      `· 내용 : ${brief}`,
+      `· 일시 : ${fmtDateTime(r.occurredAt)}`,
+      `· 담당 : ${r.assignee || ""}`,
       "",
-      "확인 후 조치 부탁드립니다. 조치 완료 시 위 링크의 '신고내역·처리현황'에서 관리자 모드로 완료 처리해 주세요."
+      "▼ 사진 확인 · 조치완료 처리",
+      link
     ].join("\n");
   }
 
