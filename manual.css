@@ -210,6 +210,24 @@ body {
   margin-bottom: 9px;
   background: #fff;
 }
+.login-box .lb-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+.login-box .lb-check .bx {
+  width: 13px; height: 13px;
+  border-radius: 3px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 9px;
+  line-height: 13px;
+  text-align: center;
+}
 .login-box .btn {
   background: var(--primary);
   color: #fff;
@@ -307,6 +325,46 @@ body {
   background: #fff;
 }
 .check-demo.on .box { background: var(--ok-text); border-color: var(--ok-text); color: #fff; text-align: center; font-size: 13px; line-height: 15px; }
+
+/* 로그인 창 재현 - 체크박스 / 버튼 */
+.ph-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+.ph-check .bx {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+.ph-btn {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 7px;
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* 조치완료 큰 버튼 재현 */
+.done-big-demo {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  margin: 10px 0 0;
+}
 
 /* 카톡 메시지 재현 */
 .kakao-demo {
