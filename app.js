@@ -6,9 +6,26 @@
   const Store = window.Store;
 
   const ROLE_NAMES = { master: "마스터", manager: "시설팀장", staff: "담당자(공용)" };
-  let role = sessionStorage.getItem("fs_role");
+  const ROLE_KEY = "fs_role";
+  // '로그인 상태 유지'를 체크하면 localStorage(브라우저를 닫아도 유지),
+  // 아니면 sessionStorage(탭을 닫으면 해제)에 보관합니다.
+  let role = sessionStorage.getItem(ROLE_KEY) || localStorage.getItem(ROLE_KEY);
   if (!ROLE_NAMES[role]) role = null;
   sessionStorage.removeItem("fs_admin"); // 이전 버전 세션 정리
+
+  function saveRole(r, remember) {
+    if (remember) {
+      localStorage.setItem(ROLE_KEY, r);
+      sessionStorage.removeItem(ROLE_KEY);
+    } else {
+      sessionStorage.setItem(ROLE_KEY, r);
+      localStorage.removeItem(ROLE_KEY);
+    }
+  }
+  function clearRole() {
+    sessionStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(ROLE_KEY);
+  }
   let adminMode = !!role;
   const canManage = () => role === "master" || role === "manager";
   const isMaster = () => role === "master";
@@ -108,27 +125,46 @@
     return null;
   }
 
-  $("#adminBtn").addEventListener("click", async () => {
+  // 로그인 창 열기 / 닫기
+  function closeLogin() {
+    $("#loginModal").classList.add("hidden");
+    $("#mLoginCode").value = "";
+    $("#mLoginError").classList.add("hidden");
+  }
+  $("#loginCloseBtn").addEventListener("click", closeLogin);
+  $("#loginModal").addEventListener("click", (e) => {
+    if (e.target === $("#loginModal")) closeLogin();
+  });
+
+  $("#adminBtn").addEventListener("click", () => {
     if (adminMode) { switchView("list"); return; }
-    const code = prompt("계정 비밀번호를 입력하세요.\n(마스터 / 시설팀장 / 담당자 공용)");
-    if (code === null) return;
-    const found = await resolveRole(code);
+    $("#mLoginError").classList.add("hidden");
+    $("#loginModal").classList.remove("hidden");
+    setTimeout(() => $("#mLoginCode").focus(), 50);
+  });
+
+  $("#mLoginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const found = await resolveRole($("#mLoginCode").value);
     if (found) {
       role = found;
       adminMode = true;
-      sessionStorage.setItem("fs_role", role);
+      saveRole(role, $("#mRemember").checked);
+      closeLogin();
       refreshAdminUI();
       toast(`${ROLE_NAMES[role]} 계정으로 로그인했습니다.`);
       switchView("list");
     } else {
-      toast("비밀번호가 올바르지 않습니다.");
+      $("#mLoginError").classList.remove("hidden");
+      $("#mLoginCode").value = "";
+      $("#mLoginCode").focus();
     }
   });
 
   $("#adminLogoutBtn").addEventListener("click", () => {
     adminMode = false;
     role = null;
-    sessionStorage.removeItem("fs_role");
+    clearRole();
     refreshAdminUI();
     renderReports();
     toast("로그아웃했습니다.");
@@ -688,6 +724,10 @@
     setDefaultDateTime();
     updateSubmitState();
     refreshAdminUI();
+    // CSS 마스킹을 지원하지 않는 브라우저에서는 password 타입으로 전환
+    if (!(window.CSS && CSS.supports && CSS.supports("-webkit-text-security", "disc"))) {
+      $("#mLoginCode").type = "password";
+    }
     try {
       await Store.init();
     } catch (err) {

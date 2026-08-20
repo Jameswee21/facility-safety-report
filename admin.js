@@ -54,9 +54,26 @@
 
   // ---------- 로그인 게이트 (3단계 계정) ----------
   const ROLE_NAMES = { master: "마스터", manager: "시설팀장", staff: "담당자(공용)" };
-  let role = sessionStorage.getItem("fs_role");
+  const ROLE_KEY = "fs_role";
+  // '로그인 상태 유지'를 체크하면 localStorage(브라우저를 닫아도 유지),
+  // 아니면 sessionStorage(탭을 닫으면 해제)에 보관합니다.
+  let role = sessionStorage.getItem(ROLE_KEY) || localStorage.getItem(ROLE_KEY);
   if (!ROLE_NAMES[role]) role = null;
   sessionStorage.removeItem("fs_admin"); // 이전 버전 세션 정리
+
+  function saveRole(r, remember) {
+    if (remember) {
+      localStorage.setItem(ROLE_KEY, r);
+      sessionStorage.removeItem(ROLE_KEY);
+    } else {
+      sessionStorage.setItem(ROLE_KEY, r);
+      localStorage.removeItem(ROLE_KEY);
+    }
+  }
+  function clearRole() {
+    sessionStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(ROLE_KEY);
+  }
 
   const isMaster = () => role === "master";
   const canManage = () => role === "master" || role === "manager";
@@ -74,7 +91,7 @@
     const found = await resolveRole($("#loginCode").value);
     if (found) {
       role = found;
-      sessionStorage.setItem("fs_role", role);
+      saveRole(role, $("#rememberMe").checked);
       $("#loginError").classList.add("hidden");
       enterDashboard();
     } else {
@@ -85,7 +102,7 @@
   });
 
   $("#logoutBtn").addEventListener("click", () => {
-    sessionStorage.removeItem("fs_role");
+    clearRole();
     location.reload();
   });
 

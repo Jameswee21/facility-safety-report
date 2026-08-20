@@ -396,6 +396,28 @@ textarea { resize: vertical; }
 }
 .done-check input { width: 22px; height: 22px; accent-color: var(--ok-text); }
 
+/* 관리자 로그인 창 */
+.login-hint { font-size: 14px; color: var(--muted); margin-bottom: 12px; line-height: 1.55; }
+#mLoginCode {
+  text-align: center;
+  letter-spacing: 6px;
+  font-size: 18px;
+  margin-bottom: 14px;
+}
+#mLoginCode.masked { -webkit-text-security: disc; }
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.remember input { width: 20px; height: 20px; accent-color: var(--primary); flex-shrink: 0; }
+.remember-note { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+.login-error { color: var(--danger); font-size: 13.5px; font-weight: 600; margin-bottom: 10px; }
+
 /* 신고내용 수정 (마스터 전용) */
 .edit-btn-wide {
   width: 100%;
