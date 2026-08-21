@@ -44,6 +44,9 @@
       this._set("fs_suggestions", list);
     },
 
+    // 데모 모드에서는 사진을 그대로(dataURL) 사용합니다.
+    async uploadPhoto(dataUrl) { return dataUrl; },
+
     async getSettings() {
       const s = JSON.parse(localStorage.getItem("fs_settings") || "{}");
       return { pw_manager: s.pw_manager || "2026", pw_staff: s.pw_staff || "1111" };
@@ -90,8 +93,20 @@
         assignee: row.assignee,
         status: row.status,
         completedAt: row.completed_at,
+        donePhoto: row.done_photo_url,
         createdAt: row.created_at
       };
+    },
+
+    // dataURL 사진을 Storage에 올리고 공개 주소를 돌려줍니다.
+    async uploadPhoto(dataUrl) {
+      const blob = await (await fetch(dataUrl)).blob();
+      const path = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const up = await this.client.storage.from("report-photos")
+        .upload(path, blob, { contentType: "image/jpeg" });
+      if (up.error) throw up.error;
+      const { data: pub } = this.client.storage.from("report-photos").getPublicUrl(path);
+      return pub.publicUrl;
     },
 
     async listReports() {
@@ -109,13 +124,7 @@
     },
 
     async addReport(r) {
-      // dataURL → Blob 변환 후 Storage 업로드
-      const blob = await (await fetch(r.photo)).blob();
-      const path = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-      const up = await this.client.storage.from("report-photos")
-        .upload(path, blob, { contentType: "image/jpeg" });
-      if (up.error) throw up.error;
-      const { data: pub } = this.client.storage.from("report-photos").getPublicUrl(path);
+      const photoUrl = await this.uploadPhoto(r.photo);
 
       const { error } = await this.client.from("reports").insert({
         type: r.type,
@@ -124,7 +133,7 @@
         // — 그대로 보내면 DB가 UTC로 해석해 9시간 어긋남
         occurred_at: new Date(r.occurredAt).toISOString(),
         description: r.description,
-        photo_url: pub.publicUrl,
+        photo_url: photoUrl,
         contact: r.contact || null,
         consent: r.consent,
         status: r.status
@@ -137,6 +146,7 @@
       if ("assignee" in patch) row.assignee = patch.assignee;
       if ("status" in patch) row.status = patch.status;
       if ("completedAt" in patch) row.completed_at = patch.completedAt;
+      if ("donePhoto" in patch) row.done_photo_url = patch.donePhoto;
       // 마스터 계정의 신고내용 수정 항목
       if ("type" in patch) row.type = patch.type;
       if ("location" in patch) row.location = patch.location;

@@ -177,40 +177,13 @@
     $("#occurredAt").value = d.toISOString().slice(0, 16);
   }
 
-  // 사진 첨부 + 압축(최대 1024px, 목표 150KB 이하가 될 때까지 품질 단계 하향)
-  async function compressImage(file, maxDim = 1024, targetKB = 150) {
-    const dataUrl = await new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = rej;
-      fr.readAsDataURL(file);
-    });
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = rej;
-      im.src = dataUrl;
-    });
-    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    // 목표 용량에 들어올 때까지 품질을 낮춰가며 재압축 (최저 40%)
-    let quality = 0.7;
-    let out = canvas.toDataURL("image/jpeg", quality);
-    while (out.length * 0.75 > targetKB * 1024 && quality > 0.4) {
-      quality -= 0.1;
-      out = canvas.toDataURL("image/jpeg", quality);
-    }
-    return out;
-  }
+  // 사진 압축은 photo.js의 window.compressImage 를 사용합니다.
 
   $("#photo").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      photoDataUrl = await compressImage(file);
+      photoDataUrl = await window.compressImage(file);
       const prev = $("#photoPreview");
       prev.src = photoDataUrl;
       prev.classList.remove("hidden");
@@ -411,10 +384,12 @@
 
   let detailId = null;
   let detailEditing = false;
+  let donePhotoData = null;   // 첨부한 완료사진 (업로드 전)
 
   function openDetail(id) {
     detailId = id;
     detailEditing = false;
+    donePhotoData = null;
     renderDetail();
     $("#detailModal").classList.remove("hidden");
   }
@@ -520,14 +495,26 @@
       const editBtn = isMaster()
         ? '<button type="button" id="detailEditBtn" class="edit-btn-wide">✏️ 신고내용 수정</button>'
         : "";
+      // 조치완료는 완료 사진을 첨부해야 처리할 수 있습니다.
+      const doneBox = done ? `
+        <div class="done-state">
+          ✓ 조치완료됨 (${fmtDate(r.completedAt)})
+          <button type="button" id="undoBtn" class="undo-mini">해제</button>
+        </div>` : `
+        <div class="done-attach">
+          <label class="photo-drop" id="donePhotoDrop">
+            <input type="file" id="donePhoto" accept="image/*" hidden>
+            <span id="donePhotoText">📷 완료 사진 촬영 · 선택</span>
+          </label>
+          <img id="donePreview" class="photo-preview hidden" alt="완료 사진 미리보기">
+          <button type="button" id="doneBtn" class="primary-btn" disabled>조치완료 처리</button>
+          <p class="kakao-hint" id="doneNote">완료 사진을 첨부하면 버튼이 활성화됩니다.</p>
+        </div>`;
       adminHtml = `
       <div class="admin-panel">
         <h4>🔑 ${ROLE_NAMES[role]} 처리</h4>
         ${assignRow}
-        <label class="done-check">
-          <input type="checkbox" id="doneCheck" ${done ? "checked" : ""}>
-          <span>${done ? "조치완료됨 (해제하면 진행중으로 변경)" : "진행중 — 체크하면 조치완료 처리"}</span>
-        </label>
+        ${doneBox}
         ${kakaoBox}
         ${editBtn}
       </div>`;
@@ -551,7 +538,18 @@
         <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
         ${r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
-      <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">
+      ${(done && r.donePhoto) ? `
+        <div class="ba-grid">
+          <div class="ba-item">
+            <div class="ba-label before">조치 전</div>
+            <img class="detail-photo" src="${escapeHtml(r.photo)}" alt="조치 전 사진">
+          </div>
+          <div class="ba-item">
+            <div class="ba-label after">조치 후</div>
+            <img class="detail-photo" src="${escapeHtml(r.donePhoto)}" alt="조치 후 사진">
+          </div>
+        </div>`
+        : `<img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">`}
       ${adminHtml}
     ` : `
       <table class="detail-table">
@@ -608,19 +606,57 @@
         });
       }
 
-      $("#doneCheck").addEventListener("change", async (e) => {
-        const checked = e.target.checked;
-        try {
+      // 완료 사진 첨부 → 조치완료 처리
+      if ($("#donePhoto")) {
+        $("#donePhoto").addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            donePhotoData = await window.compressImage(file);
+            $("#donePreview").src = donePhotoData;
+            $("#donePreview").classList.remove("hidden");
+            $("#donePhotoText").textContent = "📷 사진 다시 선택";
+            $("#doneBtn").disabled = false;
+            $("#doneNote").textContent = "이제 아래 버튼을 눌러 완료 처리하세요.";
+          } catch { toast("사진을 불러올 수 없습니다."); }
+        });
+
+        $("#doneBtn").addEventListener("click", async () => {
+          if (!donePhotoData) return toast("완료 사진을 먼저 첨부해 주세요.");
+          const btn = $("#doneBtn");
+          btn.disabled = true;
+          btn.textContent = "사진 올리는 중...";
+          try {
+            await Store.updateReport(r.id, {
+              status: "조치완료",
+              completedAt: new Date().toISOString().slice(0, 10),
+              donePhoto: await Store.uploadPhoto(donePhotoData)
+            });
+            donePhotoData = null;
+            toast("조치완료 처리되었습니다. (조치일 자동 입력)");
+            closeDetail();
+            renderReports();
+          } catch (err) {
+            console.error(err);
+            toast("처리에 실패했습니다.");
+            btn.disabled = false;
+            btn.textContent = "조치완료 처리";
+          }
+        });
+      }
+
+      if ($("#undoBtn")) {
+        $("#undoBtn").addEventListener("click", async () => {
+          if (!confirm("조치완료를 해제할까요? 첨부한 완료 사진도 함께 지워집니다.")) return;
           const back = nextStatus(false, r.assignee);
-          await Store.updateReport(r.id, {
-            status: checked ? "조치완료" : back,
-            completedAt: checked ? new Date().toISOString().slice(0, 10) : null
-          });
-          toast(checked ? "조치완료 처리되었습니다. (조치일 자동 입력)" : `${back}(으)로 변경되었습니다.`);
-          closeDetail();
-          renderReports();
-        } catch (err) { console.error(err); toast("저장에 실패했습니다."); }
-      });
+          try {
+            await Store.updateReport(r.id, { status: back, completedAt: null, donePhoto: null });
+            toast(`${back}(으)로 변경되었습니다.`);
+            closeDetail();
+            renderReports();
+          } catch (err) { console.error(err); toast("저장에 실패했습니다."); }
+        });
+      }
     }
   }
 

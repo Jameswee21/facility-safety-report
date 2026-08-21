@@ -14,8 +14,9 @@ create table if not exists reports (
   contact text,
   consent boolean not null default false,
   assignee text,
-  status text not null default '진행중',
+  status text not null default '접수',
   completed_at date,
+  done_photo_url text,
   created_at timestamptz not null default now()
 );
 

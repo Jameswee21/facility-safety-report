@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e7490">
 <title>시설팀장용 사용 매뉴얼 | 시설 보수 신고 시스템</title>
-<link rel="stylesheet" href="manual.css?v=2">
+<link rel="stylesheet" href="manual.css?v=3">
 </head>
 <body>
 <div class="deck">
@@ -33,7 +33,7 @@
       <li><span class="n">1</span><span class="t"><b>접수 확인</b><span>직원이 신고한 새 건을 대시보드에서 확인합니다.</span></span></li>
       <li><span class="n">2</span><span class="t"><b>담당자 지정</b><span>내용을 보고 적합한 담당자 이름을 입력합니다. 상태가 자동으로 진행중이 됩니다.</span></span></li>
       <li><span class="n">3</span><span class="t"><b>카톡 업무지시</b><span>메시지를 생성·복사해 담당자에게 카카오톡으로 보냅니다.</span></span></li>
-      <li><span class="n">4</span><span class="t"><b>진행 관리</b><span>담당자가 조치완료 체크를 했는지 확인하고, 지연 건을 챙깁니다.</span></span></li>
+      <li><span class="n">4</span><span class="t"><b>진행 관리</b><span>담당자가 완료 사진을 올렸는지 확인하고, 지연 건을 챙깁니다.</span></span></li>
       <li><span class="n">5</span><span class="t"><b>통계 활용</b><span>엑셀로 내려받아 처리현황 보고 자료로 사용합니다.</span></span></li>
     </ul>
   </section>
@@ -173,8 +173,8 @@
       <div class="flow-item f-new">접수 <span>직원이 신고한 직후 · 담당자 미지정</span></div>
       <div class="flow-arrow">▼ 시설팀장이 담당자를 지정하면</div>
       <div class="flow-item f-prog">진행중 <span>담당자가 배정되어 조치를 기다리는 상태</span></div>
-      <div class="flow-arrow">▼ 담당자가 완료 체크를 하면</div>
-      <div class="flow-item f-done">조치완료 <span>조치일이 자동으로 기록됨</span></div>
+      <div class="flow-arrow">▼ 담당자가 완료 사진을 첨부하고 처리하면</div>
+      <div class="flow-item f-done">조치완료 <span>조치 전·후 사진과 조치일이 자동 기록됨</span></div>
     </div>
     <div class="note">
       담당자 지정을 해제하면 다시 <b>접수</b>로, 조치완료를 해제하면 <b>진행중</b>으로 되돌아갑니다.
@@ -250,10 +250,15 @@
     </div>
 
     <div class="tip">
-      <b>담당자는 링크 한 번이면 끝납니다</b>
+      <b>담당자는 링크 하나로 처리합니다</b>
       링크를 누르면 그 신고 건만 열리고 — 사진과 상황설명이 한 화면에 보이며,
-      아래 [✓ 조치완료 처리] 버튼으로 그 자리에서 완료 처리까지 됩니다.
-      담당자가 목록을 뒤지거나 사진을 따로 회신할 필요가 없습니다.
+      조치 후 <b style="display:inline">완료 사진을 첨부</b>하고 그 자리에서 완료 처리까지 합니다.
+      담당자가 목록을 뒤지거나 사진을 카톡으로 따로 회신할 필요가 없습니다.
+    </div>
+    <div class="note">
+      <b>완료 사진은 필수입니다</b>
+      완료 사진을 첨부해야 완료 처리가 되므로, 조치 결과를 눈으로 확인할 수 있습니다.
+      완료된 건은 상세 창에서 <b>조치 전 · 조치 후</b> 사진이 나란히 보입니다.
     </div>
     <div class="note">
       <b>상황설명이 길면</b>
@@ -268,11 +273,12 @@
     <ul class="defs">
       <li><span class="k">접수</span><span>담당자 미지정 건입니다. 가장 먼저 처리해야 할 목록입니다.</span></li>
       <li><span class="k">진행중</span><span>지시는 나갔지만 아직 완료되지 않은 건입니다. 오래된 건은 담당자에게 확인하세요.</span></li>
-      <li><span class="k">조치완료</span><span>담당자가 완료 체크를 한 건입니다. 조치일이 함께 기록됩니다.</span></li>
+      <li><span class="k">조치완료</span><span>담당자가 완료 사진을 첨부하고 처리한 건입니다. 조치 전·후 사진과 조치일이 함께 기록됩니다.</span></li>
     </ul>
     <div class="note">
-      <b>담당자가 체크를 못 했다면</b>
-      시설팀장도 완료 체크가 가능합니다. 표 맨 오른쪽 체크박스를 누르면 조치일이 오늘 날짜로 기록됩니다.
+      <b>담당자가 처리하지 못했다면</b>
+      시설팀장도 완료 처리가 가능합니다. 표 맨 오른쪽 [완료 처리] 버튼을 누르면 상세 창이 열리고,
+      완료 사진을 첨부한 뒤 처리하면 조치일이 오늘 날짜로 기록됩니다.
     </div>
     <div class="tip">
       <b>지연 건 확인 요령</b>
@@ -329,7 +335,7 @@
           <li>신고내역 전체 열람</li>
           <li>담당자 지정·변경</li>
           <li>카톡 메시지 생성</li>
-          <li>조치완료 체크</li>
+          <li>완료 사진 첨부 · 완료 처리</li>
           <li>엑셀 다운로드</li>
           <li>연락처 확인</li>
         </ul>

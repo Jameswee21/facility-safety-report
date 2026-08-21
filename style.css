@@ -396,6 +396,49 @@ textarea { resize: vertical; }
 }
 .done-check input { width: 22px; height: 22px; accent-color: var(--ok-text); }
 
+/* 조치 전·후 사진 */
+.ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.ba-item .detail-photo { height: 130px; object-fit: cover; margin-top: 0; }
+.ba-label {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 7px;
+  padding: 4px 0;
+  text-align: center;
+  margin-bottom: 5px;
+}
+.ba-label.before { background: var(--warn-bg); color: var(--warn-text); }
+.ba-label.after { background: var(--ok-bg); color: var(--ok-text); }
+
+/* 완료 사진 첨부 (모바일 상세) */
+.done-attach { margin-top: 4px; }
+.done-attach .photo-drop { padding: 20px 12px; font-size: 14.5px; }
+.done-attach .primary-btn { margin-top: 10px; }
+.done-attach .primary-btn:disabled { background: #cbd5e1; }
+.done-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.undo-mini {
+  background: #fff;
+  border: 1px solid #86efac;
+  color: var(--ok-text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 /* 관리자 로그인 창 */
 .login-hint { font-size: 14px; color: var(--muted); margin-bottom: 12px; line-height: 1.55; }
 #mLoginCode {

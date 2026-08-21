@@ -51,6 +51,8 @@
     toastTimer = setTimeout(() => el.classList.add("hidden"), 2600);
   }
 
+  let donePhotoData = null;   // 첨부한 완료사진 (업로드 전)
+
   // ---------- 화면 그리기 ----------
   function render() {
     if (!report) {
@@ -75,17 +77,40 @@
       actHtml = `
         <div class="act-card">
           <div class="act-title">현장 조치를 마치셨나요?</div>
-          <p class="act-sub">아래 버튼을 누르면 조치완료로 기록되고 오늘 날짜가 조치일로 자동 입력됩니다.</p>
-          <button type="button" id="doneBtn" class="done-big">✓ 조치완료 처리</button>
+          <p class="act-sub">조치한 상태를 찍은 <b>완료 사진을 첨부해야</b> 완료 처리할 수 있습니다.</p>
+          <label class="photo-drop" id="donePhotoDrop">
+            <input type="file" id="donePhoto" accept="image/*" hidden>
+            <span id="donePhotoText">📷 완료 사진 촬영 · 선택</span>
+          </label>
+          <img id="donePreview" class="done-preview hidden" alt="완료 사진 미리보기">
+          <button type="button" id="doneBtn" class="done-big" disabled>조치완료 처리</button>
+          <p class="act-note" id="doneNote">완료 사진을 첨부하면 버튼이 활성화됩니다.</p>
         </div>`;
     } else {
       actHtml = `
         <div class="act-card">
           <div class="act-title">조치완료 처리</div>
-          <p class="act-sub">담당자 로그인 후 이 화면에서 바로 완료 처리할 수 있습니다.</p>
+          <p class="act-sub">담당자 로그인 후 완료 사진을 첨부하고 완료 처리할 수 있습니다.</p>
           <button type="button" id="loginBtn" class="done-big">로그인하고 완료 처리</button>
         </div>`;
     }
+
+    // 조치완료된 건은 조치 전·후 사진을 나란히 표시
+    const photoHtml = (done && r.donePhoto) ? `
+        <div class="ba-grid">
+          <div class="ba-item">
+            <div class="ba-label before">조치 전</div>
+            <img class="view-photo" data-full="${escapeHtml(r.photo)}" src="${escapeHtml(r.photo)}" alt="조치 전 사진">
+          </div>
+          <div class="ba-item">
+            <div class="ba-label after">조치 후</div>
+            <img class="view-photo" data-full="${escapeHtml(r.donePhoto)}" src="${escapeHtml(r.donePhoto)}" alt="조치 후 사진">
+          </div>
+        </div>
+        <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>`
+      : `
+        <img class="view-photo" data-full="${escapeHtml(r.photo)}" src="${escapeHtml(r.photo)}" alt="현장 사진">
+        <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>`;
 
     $("#viewBody").innerHTML = `
       <div class="view-card">
@@ -98,8 +123,7 @@
 
         <div class="view-desc">${escapeHtml(r.description)}</div>
 
-        <img class="view-photo" id="viewPhoto" src="${escapeHtml(r.photo)}" alt="현장 사진">
-        <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>
+        ${photoHtml}
       </div>
 
       <div class="view-card">
@@ -115,29 +139,52 @@
     `;
 
     // 사진 크게 보기
-    $("#viewPhoto").addEventListener("click", () => {
-      $("#photoFull").src = r.photo;
-      $("#photoModal").classList.remove("hidden");
-    });
+    document.querySelectorAll(".view-photo").forEach((img) =>
+      img.addEventListener("click", () => {
+        $("#photoFull").src = img.dataset.full;
+        $("#photoModal").classList.remove("hidden");
+      })
+    );
+
+    // 완료 사진 첨부
+    if ($("#donePhoto")) {
+      $("#donePhoto").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          donePhotoData = await window.compressImage(file);
+          $("#donePreview").src = donePhotoData;
+          $("#donePreview").classList.remove("hidden");
+          $("#donePhotoText").textContent = "📷 사진 다시 선택";
+          $("#doneBtn").disabled = false;
+          $("#doneNote").textContent = "이제 아래 버튼을 눌러 완료 처리하세요.";
+        } catch {
+          toast("사진을 불러올 수 없습니다. 다시 시도해 주세요.");
+        }
+      });
+    }
 
     if ($("#doneBtn")) $("#doneBtn").addEventListener("click", () => setDone(true));
     if ($("#undoBtn")) $("#undoBtn").addEventListener("click", () => {
-      if (confirm("조치완료를 해제할까요?")) setDone(false);
+      if (confirm("조치완료를 해제할까요? 첨부한 완료 사진도 함께 지워집니다.")) setDone(false);
     });
     if ($("#loginBtn")) $("#loginBtn").addEventListener("click", openLogin);
   }
 
   async function setDone(done) {
+    if (done && !donePhotoData) return toast("완료 사진을 먼저 첨부해 주세요.");
     const btn = $("#doneBtn") || $("#undoBtn");
-    if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
+    if (btn) { btn.disabled = true; btn.textContent = done ? "사진 올리는 중..." : "처리 중..."; }
     try {
       const back = (report.assignee && String(report.assignee).trim()) ? "진행중" : "접수";
       const patch = {
         status: done ? "조치완료" : back,
-        completedAt: done ? new Date().toISOString().slice(0, 10) : null
+        completedAt: done ? new Date().toISOString().slice(0, 10) : null,
+        donePhoto: done ? await Store.uploadPhoto(donePhotoData) : null
       };
       await Store.updateReport(report.id, patch);
       Object.assign(report, patch);
+      donePhotoData = null;
       render();
       toast(done ? "조치완료 처리되었습니다. 수고하셨습니다!" : "진행중으로 되돌렸습니다.");
     } catch (err) {
