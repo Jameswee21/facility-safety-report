@@ -164,3 +164,14 @@
   font-size: 17px;
   cursor: pointer;
 }
+
+/* 사진이 없는 신고 */
+.no-photo-box {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 30px 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+  background: #f8fafc;
+}

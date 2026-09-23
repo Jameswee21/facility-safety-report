@@ -21,20 +21,22 @@
     },
     _set(key, list) { localStorage.setItem(key, JSON.stringify(list)); },
 
-    async listReports() { return this._get("fs_reports"); },
-    async getReport(id) {
-      return this._get("fs_reports").find((x) => String(x.id) === String(id)) || null;
+    _key(kind) { return kind === "safety" ? "fs_safety" : "fs_reports"; },
+
+    async listReports(kind) { return this._get(this._key(kind)); },
+    async getReport(id, kind) {
+      return this._get(this._key(kind)).find((x) => String(x.id) === String(id)) || null;
     },
-    async addReport(r) {
-      const list = this._get("fs_reports");
+    async addReport(r, kind) {
+      const list = this._get(this._key(kind));
       list.unshift(r);
-      try { this._set("fs_reports", list); }
+      try { this._set(this._key(kind), list); }
       catch { throw new Error("기기 저장 공간이 가득 찼습니다. (데모 모드 한계)"); }
     },
-    async updateReport(id, patch) {
-      const list = this._get("fs_reports");
+    async updateReport(id, patch, kind) {
+      const list = this._get(this._key(kind));
       const i = list.findIndex((x) => x.id === id);
-      if (i >= 0) { Object.assign(list[i], patch); this._set("fs_reports", list); }
+      if (i >= 0) { Object.assign(list[i], patch); this._set(this._key(kind), list); }
     },
 
     async listSuggestions() { return this._get("fs_suggestions"); },
@@ -56,8 +58,9 @@
       s[key] = value;
       localStorage.setItem("fs_settings", JSON.stringify(s));
     },
-    async deleteReport(id) {
-      this._set("fs_reports", this._get("fs_reports").filter((x) => x.id !== id));
+    async deleteReport(id, photoUrl, kind) {
+      const k = this._key(kind);
+      this._set(k, this._get(k).filter((x) => x.id !== id));
     },
     async deleteSuggestion(id) {
       this._set("fs_suggestions", this._get("fs_suggestions").filter((x) => x.id !== id));
@@ -80,6 +83,9 @@
       this.client = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
     },
 
+    // 시설 신고 reports / 안전보건 신고 safety_reports
+    _table(kind) { return kind === "safety" ? "safety_reports" : "reports"; },
+
     _fromRow(row) {
       return {
         id: row.id,
@@ -94,7 +100,11 @@
         status: row.status,
         completedAt: row.completed_at,
         donePhoto: row.done_photo_url,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        // 안전보건 신고 전용 항목
+        witness: row.witness,
+        risk: row.risk,
+        suggestion: row.suggestion
       };
     },
 
@@ -109,24 +119,25 @@
       return pub.publicUrl;
     },
 
-    async listReports() {
+    async listReports(kind) {
       const { data, error } = await this.client
-        .from("reports").select("*").order("created_at", { ascending: false });
+        .from(this._table(kind)).select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data.map(this._fromRow);
     },
 
-    async getReport(id) {
+    async getReport(id, kind) {
       const { data, error } = await this.client
-        .from("reports").select("*").eq("id", id).maybeSingle();
+        .from(this._table(kind)).select("*").eq("id", id).maybeSingle();
       if (error) throw error;
       return data ? this._fromRow(data) : null;
     },
 
-    async addReport(r) {
-      const photoUrl = await this.uploadPhoto(r.photo);
+    async addReport(r, kind) {
+      // 안전보건 신고는 사진이 선택 항목입니다.
+      const photoUrl = r.photo ? await this.uploadPhoto(r.photo) : null;
 
-      const { error } = await this.client.from("reports").insert({
+      const row = {
         type: r.type,
         location: r.location,
         // datetime-local 값(시간대 없는 현지 시각)을 UTC ISO로 변환해 저장
@@ -137,11 +148,17 @@
         contact: r.contact || null,
         consent: r.consent,
         status: r.status
-      });
+      };
+      if (kind === "safety") {
+        row.witness = r.witness;
+        row.risk = r.risk || null;
+        row.suggestion = r.suggestion || null;
+      }
+      const { error } = await this.client.from(this._table(kind)).insert(row);
       if (error) throw error;
     },
 
-    async updateReport(id, patch) {
+    async updateReport(id, patch, kind) {
       const row = {};
       if ("assignee" in patch) row.assignee = patch.assignee;
       if ("status" in patch) row.status = patch.status;
@@ -154,7 +171,7 @@
       if ("contact" in patch) row.contact = patch.contact;
       // 시간대 없는 현지 시각을 UTC로 변환해 저장 (신고 등록과 동일)
       if ("occurredAt" in patch) row.occurred_at = new Date(patch.occurredAt).toISOString();
-      const { error } = await this.client.from("reports").update(row).eq("id", id);
+      const { error } = await this.client.from(this._table(kind)).update(row).eq("id", id);
       if (error) throw error;
     },
 
@@ -196,8 +213,8 @@
       const { error } = await this.client.from("app_settings").upsert({ key, value });
       if (error) throw error;
     },
-    async deleteReport(id, photoUrl) {
-      const { error } = await this.client.from("reports").delete().eq("id", id);
+    async deleteReport(id, photoUrl, kind) {
+      const { error } = await this.client.from(this._table(kind)).delete().eq("id", id);
       if (error) throw error;
       // 저장소의 사진 파일도 함께 삭제 (실패해도 무시)
       const path = (photoUrl || "").split("/report-photos/")[1];

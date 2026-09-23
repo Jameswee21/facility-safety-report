@@ -118,9 +118,12 @@
     $("#manualLink").href = role === "staff" ? "manual-staff.html" : "manual-manager.html";
     startClock();
     loadReports();
+    loadSafety(true);
     loadSuggestions();
     refreshTimer = setInterval(() => {
-      if (document.visibilityState === "visible") loadReports(true);
+      if (document.visibilityState !== "visible") return;
+      loadReports(true);
+      loadSafety(true);
     }, 60000);
   }
 
@@ -160,6 +163,7 @@
   }
 
   function renderStats() {
+    $("#tabCntFacility").textContent = reportsCache.length ? `(${reportsCache.length})` : "";
     $("#statTotal").textContent = reportsCache.length;
     $("#statNew").textContent = reportsCache.filter((r) => statusOf(r) === "접수").length;
     $("#statProgress").textContent = reportsCache.filter((r) => statusOf(r) === "진행중").length;
@@ -352,7 +356,9 @@
       $("#panel-reports").scrollIntoView({ behavior: "smooth", block: "start" });
     })
   );
-  $("#refreshBtn").addEventListener("click", () => { loadReports(); toast("새로고침했습니다."); });
+  $("#refreshBtn").addEventListener("click", () => {
+    loadReports(); loadSafety(true); toast("새로고침했습니다.");
+  });
 
   // ---------- 상세 모달 ----------
   let detailId = null;
@@ -755,14 +761,358 @@
   $("#pwSaveManager").addEventListener("click", () => savePw("pw_manager", "#pwManagerInput", "시설팀장"));
   $("#pwSaveStaff").addEventListener("click", () => savePw("pw_staff", "#pwStaffInput", "담당자(공용)"));
 
+  // ===============================================
+  // 안전보건 신고 (safety_reports) — 조치 흐름은 시설 신고와 동일
+  // ===============================================
+  const SF_KIND = "safety";
+  const SF_PAGE = 25;
+  let safetyCache = [];
+  let sfPage = 1;
+  let sfDetailId = null;
+  let sfDonePhoto = null;
+
+  const RISK_CLASS = {
+    "크게 다칠 수 있음": "risk-high",
+    "가벼운 부상 가능": "risk-mid",
+    "불편한 정도": "risk-low"
+  };
+
+  async function loadSafety(silent) {
+    try {
+      safetyCache = await Store.listReports(SF_KIND);
+    } catch (err) {
+      console.error(err);
+      if (!silent) toast("안전보건 신고를 불러오지 못했습니다. (safety_reports 테이블 SQL 필요)");
+      return;
+    }
+    $("#tabCntSafety").textContent = safetyCache.length ? `(${safetyCache.length})` : "";
+    renderSafetySummary();
+    renderSafetyTable();
+  }
+
+  function renderSafetySummary() {
+    const cnt = (s) => safetyCache.filter((r) => statusOf(r) === s).length;
+    const high = safetyCache.filter((r) => r.risk === "크게 다칠 수 있음" && statusOf(r) !== "조치완료").length;
+    $("#sfSummary").innerHTML = `
+      <span class="sf-chip">전체 <b>${safetyCache.length}</b></span>
+      <span class="sf-chip new">접수 <b>${cnt("접수")}</b></span>
+      <span class="sf-chip prog">진행중 <b>${cnt("진행중")}</b></span>
+      <span class="sf-chip done">조치완료 <b>${cnt("조치완료")}</b></span>
+      ${high ? `<span class="sf-chip alert">⚠ 크게 다칠 수 있음 미완료 <b>${high}</b></span>` : ""}
+    `;
+  }
+
+  function sfFiltered() {
+    const st = $("#sfFilterStatus").value;
+    const rk = $("#sfFilterRisk").value;
+    const q = $("#sfFilterSearch").value.trim().toLowerCase();
+    return safetyCache
+      .filter((r) => {
+        if (st && statusOf(r) !== st) return false;
+        if (rk && r.risk !== rk) return false;
+        if (q) {
+          const hay = `${r.location} ${r.description} ${r.assignee || ""} ${r.type}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+  }
+
+  function renderSafetyTable() {
+    const tbody = $("#safetyTbody");
+    const all = sfFiltered();
+    $("#safetyEmpty").classList.toggle("hidden", all.length > 0);
+
+    const pages = Math.max(1, Math.ceil(all.length / SF_PAGE));
+    if (sfPage > pages) sfPage = pages;
+    const from = (sfPage - 1) * SF_PAGE;
+    const to = Math.min(from + SF_PAGE, all.length);
+    const list = all.slice(from, to);
+
+    $("#sfPagerInfo").textContent = all.length
+      ? `총 ${all.length}건 중 ${from + 1}–${to}번째 표시` : "표시할 신고가 없습니다";
+    $("#sfPrevPage").disabled = sfPage <= 1;
+    $("#sfNextPage").disabled = sfPage >= pages;
+    let nums = "";
+    for (let p = Math.max(1, sfPage - 3); p <= Math.min(pages, Math.max(1, sfPage - 3) + 6); p++) {
+      nums += `<button type="button" class="page-num ${p === sfPage ? "current" : ""}" data-p="${p}">${p}</button>`;
+    }
+    $("#sfPageNums").innerHTML = nums;
+    $("#sfPageNums").querySelectorAll(".page-num").forEach((b) =>
+      b.addEventListener("click", () => { sfPage = Number(b.dataset.p); renderSafetyTable(); })
+    );
+
+    tbody.innerHTML = list.map((r) => {
+      const st = statusOf(r);
+      const done = st === "조치완료";
+      return `
+      <tr data-id="${escapeHtml(r.id)}">
+        <td class="cell-datetime">${fmtDateTime(r.occurredAt)}</td>
+        <td><span class="type-badge">${escapeHtml(r.type)}</span>
+            <div class="witness">${escapeHtml(r.witness || "")}</div></td>
+        <td class="cell-loc">${escapeHtml(r.location)}</td>
+        <td>
+          <div class="inspect-cell" data-act="sfdetail">
+            ${r.photo ? `<img src="${escapeHtml(r.photo)}" alt="사진" loading="lazy">` : '<span class="no-photo">사진<br>없음</span>'}
+            <span class="desc">${escapeHtml(r.description)}</span>
+            <span class="more">상세 ›</span>
+          </div>
+        </td>
+        <td>${r.risk ? `<span class="risk-badge ${RISK_CLASS[r.risk] || ""}">${escapeHtml(r.risk)}</span>` : "-"}</td>
+        <td>
+          ${canManage()
+            ? `<input class="assignee-input" data-act="sfassignee" value="${escapeHtml(r.assignee || "")}" placeholder="담당자 입력">`
+            : escapeHtml(r.assignee || "미지정")}
+        </td>
+        <td class="cell-datetime">${r.completedAt ? fmtDate(r.completedAt) : "-"}</td>
+        <td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td>
+        <td class="done-cell">
+          ${done ? '<span class="done-mark">✓ 완료됨</span>'
+                 : '<button type="button" class="do-done-btn" data-act="sfdone">완료 처리</button>'}
+        </td>
+      </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll('[data-act="sfdetail"]').forEach((el) =>
+      el.addEventListener("click", () => openSafetyDetail(el.closest("tr").dataset.id))
+    );
+    tbody.querySelectorAll('[data-act="sfdone"]').forEach((b) =>
+      b.addEventListener("click", () => {
+        openSafetyDetail(b.closest("tr").dataset.id);
+        toast("완료 사진을 첨부하면 완료 처리할 수 있습니다.");
+      })
+    );
+    tbody.querySelectorAll('[data-act="sfassignee"]').forEach((input) => {
+      const id = input.closest("tr").dataset.id;
+      const original = input.value;
+      const save = async () => {
+        const name = input.value.trim();
+        if (name === original.trim()) return;
+        const rec = safetyCache.find((x) => String(x.id) === String(id));
+        try {
+          await Store.updateReport(id, {
+            assignee: name || null,
+            status: nextStatus(statusOf(rec || {}) === "조치완료", name)
+          }, SF_KIND);
+          toast(name ? `담당자를 '${name}'(으)로 지정했습니다. (진행중)` : "담당자 지정을 해제했습니다.");
+          loadSafety(true);
+        } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
+      };
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+      input.addEventListener("blur", save);
+    });
+  }
+
+  const sfFilterChanged = () => { sfPage = 1; renderSafetyTable(); };
+  ["sfFilterStatus", "sfFilterRisk"].forEach((id) =>
+    $("#" + id).addEventListener("change", sfFilterChanged));
+  $("#sfFilterSearch").addEventListener("input", sfFilterChanged);
+  $("#sfPrevPage").addEventListener("click", () => { sfPage--; renderSafetyTable(); });
+  $("#sfNextPage").addEventListener("click", () => { sfPage++; renderSafetyTable(); });
+
+  // ---------- 안전보건 신고 상세 ----------
+  function openSafetyDetail(id) {
+    sfDetailId = id;
+    sfDonePhoto = null;
+    renderSafetyDetail();
+    $("#detailModal").classList.remove("hidden");
+  }
+
+  function renderSafetyDetail() {
+    const r = safetyCache.find((x) => String(x.id) === String(sfDetailId));
+    if (!r) return;
+    const st = statusOf(r);
+    const done = st === "조치완료";
+    const assigned = !!(r.assignee && String(r.assignee).trim());
+
+    $("#detailTitleTag").textContent = assigned ? "" : "(담당자 지정 필요)";
+
+    const manageHtml = canManage() ? `
+      <div class="detail-assign">
+        <input type="text" id="sfAssignee" placeholder="담당자 이름 입력" value="${escapeHtml(r.assignee || "")}">
+        <button type="button" id="sfAssignSave">담당자 지정</button>
+      </div>
+      <div class="kakao-box">
+        <button type="button" id="sfKakaoBtn" class="kakao-btn" ${assigned ? "" : "disabled"}>💬 업무의뢰 카톡 메시지 생성</button>
+        ${assigned ? "" : '<p class="kakao-hint">담당자를 지정하면 카톡 메시지를 만들 수 있습니다.</p>'}
+        <div id="sfKakaoWrap" class="kakao-msg-wrap hidden">
+          <textarea id="sfKakaoMsg" readonly rows="11"></textarea>
+          <button type="button" id="sfKakaoCopy" class="kakao-btn">📋 메시지 복사하기</button>
+        </div>
+      </div>` : "";
+
+    const photoHtml = (done && r.donePhoto) ? `
+      <div class="ba-grid">
+        <div class="ba-item"><div class="ba-label before">조치 전</div>
+          ${r.photo ? `<img class="detail-photo" src="${escapeHtml(r.photo)}" alt="조치 전">`
+                    : '<div class="no-photo-box">사진 없음</div>'}</div>
+        <div class="ba-item"><div class="ba-label after">조치 후</div>
+          <img class="detail-photo" src="${escapeHtml(r.donePhoto)}" alt="조치 후"></div>
+      </div>`
+      : (r.photo ? `<img class="detail-photo" src="${escapeHtml(r.photo)}" alt="신고 사진">` : "");
+
+    $("#detailBody").innerHTML = `
+      <table class="detail-table">
+        <tr><th>사고 형태</th><td>${escapeHtml(r.type)}</td></tr>
+        <tr><th>구분</th><td>${escapeHtml(r.witness || "-")}</td></tr>
+        <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
+        <tr><th>발생장소</th><td>${escapeHtml(r.location)}</td></tr>
+        <tr><th>상황</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
+        <tr><th>위험도</th><td>${r.risk ? `<span class="risk-badge ${RISK_CLASS[r.risk] || ""}">${escapeHtml(r.risk)}</span>` : "-"}</td></tr>
+        ${r.suggestion ? `<tr><th>개선 의견</th><td style="white-space:pre-wrap">${escapeHtml(r.suggestion)}</td></tr>` : ""}
+        <tr><th>연락처</th><td>${escapeHtml(r.contact || "- (익명)")}</td></tr>
+        <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
+        <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
+        <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
+        <tr><th>접수일시</th><td>${fmtDateTime(r.createdAt)}</td></tr>
+      </table>
+
+      ${manageHtml}
+      ${photoHtml}
+
+      ${done ? `
+        <div class="done-state">
+          ✓ 조치완료됨 (${fmtDate(r.completedAt)})
+          <button type="button" id="sfUndoBtn" class="undo-mini">해제</button>
+        </div>`
+        : `
+        <div class="done-attach">
+          <div class="act-title">조치완료 처리</div>
+          <p class="kakao-hint" style="margin:0 0 10px">완료 사진을 첨부해야 완료 처리할 수 있습니다.</p>
+          <label class="photo-drop-pc">
+            <input type="file" id="sfDonePhoto" accept="image/*" hidden>
+            <span id="sfDoneText">📷 완료 사진 선택</span>
+          </label>
+          <img id="sfDonePreview" class="done-preview hidden" alt="완료 사진 미리보기">
+          <button type="button" id="sfDoneBtn" class="done-wide" disabled>조치완료 처리</button>
+        </div>`}
+
+      ${isMaster() ? `
+        <div class="master-actions">
+          <button type="button" id="sfDeleteBtn" class="del-btn-wide">🗑 이 신고 삭제</button>
+        </div>` : ""}
+    `;
+
+    if (canManage()) {
+      $("#sfAssignSave").addEventListener("click", async () => {
+        const name = $("#sfAssignee").value.trim();
+        try {
+          const st2 = nextStatus(done, name);
+          await Store.updateReport(r.id, { assignee: name || null, status: st2 }, SF_KIND);
+          r.assignee = name || null;
+          r.status = st2;
+          toast(name ? `담당자를 '${name}'(으)로 지정했습니다. (진행중)` : "담당자 지정을 해제했습니다.");
+          renderSafetyDetail();
+          renderSafetyTable();
+        } catch (err) { console.error(err); toast("담당자 저장에 실패했습니다."); }
+      });
+
+      $("#sfKakaoBtn").addEventListener("click", () => {
+        $("#sfKakaoMsg").value = buildSafetyKakaoMsg(r);
+        $("#sfKakaoWrap").classList.remove("hidden");
+      });
+      $("#sfKakaoCopy").addEventListener("click", async () => {
+        const ok = await copyText($("#sfKakaoMsg").value);
+        if (ok) toast("메시지가 복사되었습니다. 카카오톡에 붙여넣으세요.");
+        else { $("#sfKakaoMsg").focus(); $("#sfKakaoMsg").select(); toast("Ctrl+C로 복사하세요."); }
+      });
+    }
+
+    if ($("#sfDonePhoto")) {
+      $("#sfDonePhoto").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          sfDonePhoto = await window.compressImage(file);
+          $("#sfDonePreview").src = sfDonePhoto;
+          $("#sfDonePreview").classList.remove("hidden");
+          $("#sfDoneText").textContent = "📷 사진 다시 선택";
+          $("#sfDoneBtn").disabled = false;
+        } catch { toast("사진을 불러올 수 없습니다."); }
+      });
+
+      $("#sfDoneBtn").addEventListener("click", async () => {
+        if (!sfDonePhoto) return toast("완료 사진을 먼저 첨부해 주세요.");
+        const btn = $("#sfDoneBtn");
+        btn.disabled = true;
+        btn.textContent = "사진 올리는 중...";
+        try {
+          await Store.updateReport(r.id, {
+            status: "조치완료",
+            completedAt: new Date().toISOString().slice(0, 10),
+            donePhoto: await Store.uploadPhoto(sfDonePhoto)
+          }, SF_KIND);
+          sfDonePhoto = null;
+          await loadSafety(true);
+          renderSafetyDetail();
+          toast("조치완료 처리되었습니다. (조치일 자동 입력)");
+        } catch (err) {
+          console.error(err);
+          toast("처리에 실패했습니다.");
+          btn.disabled = false;
+          btn.textContent = "조치완료 처리";
+        }
+      });
+    }
+
+    if ($("#sfUndoBtn")) {
+      $("#sfUndoBtn").addEventListener("click", async () => {
+        const back = nextStatus(false, r.assignee);
+        if (!confirm(`조치완료를 해제하고 '${back}'(으)로 되돌릴까요? 완료 사진도 함께 지워집니다.`)) return;
+        try {
+          await Store.updateReport(r.id, { status: back, completedAt: null, donePhoto: null }, SF_KIND);
+          await loadSafety(true);
+          renderSafetyDetail();
+          toast(`${back}(으)로 변경되었습니다.`);
+        } catch (err) { console.error(err); toast("상태 변경에 실패했습니다."); }
+      });
+    }
+
+    if ($("#sfDeleteBtn")) {
+      $("#sfDeleteBtn").addEventListener("click", async () => {
+        if (!confirm("이 신고를 완전히 삭제할까요? 되돌릴 수 없습니다.")) return;
+        try {
+          await Store.deleteReport(r.id, r.photo, SF_KIND);
+          toast("신고가 삭제되었습니다.");
+          $("#detailModal").classList.add("hidden");
+          loadSafety(true);
+        } catch (err) { console.error(err); toast("삭제에 실패했습니다."); }
+      });
+    }
+  }
+
+  // 안전보건 업무의뢰 카톡 메시지
+  function buildSafetyKakaoMsg(r) {
+    const brief = (() => {
+      const s = String(r.description || "").replace(/\s+/g, " ").trim();
+      return s.length > 60 ? s.slice(0, 60) + "…" : s;
+    })();
+    const link = new URL(`view.html?id=${encodeURIComponent(r.id)}&kind=safety`, location.href).href;
+    return [
+      "[안전보건 조치의뢰]",
+      `· 형태 : ${r.type}`,
+      `· 장소 : ${r.location}`,
+      `· 내용 : ${brief}`,
+      r.risk ? `· 위험 : ${r.risk}` : null,
+      `· 담당 : ${r.assignee || ""}`,
+      "",
+      "▼ 내용 확인 · 조치완료 처리",
+      link
+    ].filter(Boolean).join("\n");
+  }
+
   // ---------- 탭 전환 ----------
   document.querySelectorAll(".page-tab").forEach((t) =>
     t.addEventListener("click", () => {
       document.querySelectorAll(".page-tab").forEach((x) =>
         x.classList.toggle("active", x === t));
       $("#panel-reports").classList.toggle("hidden", t.dataset.tab !== "reports");
+      $("#panel-safety").classList.toggle("hidden", t.dataset.tab !== "safety");
       $("#panel-suggestions").classList.toggle("hidden", t.dataset.tab !== "suggestions");
+      $("#statsRow").classList.toggle("hidden", t.dataset.tab !== "reports");
       if (t.dataset.tab === "suggestions") loadSuggestions();
+      if (t.dataset.tab === "safety") loadSafety();
     })
   );
 

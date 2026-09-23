@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e7490">
 <title>신고 처리현황 관리자 대시보드</title>
-<link rel="stylesheet" href="admin.css?v=10">
+<link rel="stylesheet" href="admin.css?v=11">
 </head>
 <body>
 
@@ -59,7 +59,8 @@
 
     <!-- 탭: 신고내역 / 안전 건의함 -->
     <div class="tab-row">
-      <button class="page-tab active" data-tab="reports" type="button">📋 신고내역 및 처리현황</button>
+      <button class="page-tab active" data-tab="reports" type="button">🔧 시설 신고 <span id="tabCntFacility" class="tab-cnt"></span></button>
+      <button class="page-tab" data-tab="safety" type="button">⚠️ 안전보건 신고 <span id="tabCntSafety" class="tab-cnt"></span></button>
       <button class="page-tab" data-tab="suggestions" type="button">💬 안전 건의함</button>
     </div>
 
@@ -119,6 +120,56 @@
       </div>
     </section>
 
+    <!-- ===== 안전보건 신고 ===== -->
+    <section id="panel-safety" class="hidden">
+      <div class="sf-summary" id="sfSummary"></div>
+
+      <div class="filter-bar">
+        <select id="sfFilterStatus">
+          <option value="">상태: 전체</option>
+          <option value="접수">접수</option>
+          <option value="진행중">진행중</option>
+          <option value="조치완료">조치완료</option>
+        </select>
+        <select id="sfFilterRisk">
+          <option value="">위험도: 전체</option>
+          <option value="크게 다칠 수 있음">크게 다칠 수 있음</option>
+          <option value="가벼운 부상 가능">가벼운 부상 가능</option>
+          <option value="불편한 정도">불편한 정도</option>
+        </select>
+        <input type="search" id="sfFilterSearch" placeholder="장소·상황·담당자 검색">
+      </div>
+
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>발생일시</th>
+              <th>사고 형태</th>
+              <th>발생장소</th>
+              <th>상황 (설명 · 사진)</th>
+              <th>위험도</th>
+              <th>담당자</th>
+              <th>조치일</th>
+              <th>상태</th>
+              <th>조치완료 처리</th>
+            </tr>
+          </thead>
+          <tbody id="safetyTbody"></tbody>
+        </table>
+        <div id="safetyEmpty" class="empty hidden">표시할 신고가 없습니다.</div>
+      </div>
+
+      <div class="pager">
+        <span class="pager-info" id="sfPagerInfo"></span>
+        <div class="pager-btns">
+          <button type="button" id="sfPrevPage">‹ 이전</button>
+          <span id="sfPageNums"></span>
+          <button type="button" id="sfNextPage">다음 ›</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== 안전 건의함 ===== -->
     <section id="panel-suggestions" class="hidden">
       <div class="table-wrap">
@@ -172,9 +223,9 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="config.js?v=4"></script>
-<script src="storage.js?v=6"></script>
+<script src="storage.js?v=7"></script>
 <script src="photo.js?v=1"></script>
 <script src="xlsx.js?v=1"></script>
-<script src="admin.js?v=16"></script>
+<script src="admin.js?v=17"></script>
 </body>
 </html>

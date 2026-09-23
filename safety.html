@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#b91c1c">
+<title>안전보건 신고 | 위험요소 · 아차사고</title>
+<link rel="stylesheet" href="safety.css?v=1">
+</head>
+<body>
+
+<header class="sf-header">
+  <a href="start.html" class="back" aria-label="처음으로">‹</a>
+  <h1>안전보건 신고</h1>
+  <span class="team">안전보건팀</span>
+</header>
+
+<main class="sf-main">
+
+  <!-- 신고자 보호 안내 -->
+  <section class="protect">
+    <p class="protect-title">🛡 신고하신 분을 보호합니다</p>
+    <p>
+      이 신고는 <b>책임을 묻기 위한 것이 아니라 재발을 막기 위한 것</b>입니다.
+      이름을 적지 않아도 되고, 신고를 이유로 어떠한 불이익도 없습니다.
+    </p>
+  </section>
+
+  <!-- 이미 다친 경우 안내 -->
+  <section class="injured">
+    <p><b>이미 다치셨나요?</b></p>
+    <p>먼저 응급조치를 받으신 뒤, 부서장과 안전보건팀에 즉시 알려 주세요.
+       이 화면은 <b>다칠 뻔했거나 위험한 곳</b>을 알리는 곳입니다.</p>
+  </section>
+
+  <form id="safetyForm" novalidate>
+
+    <!-- 1. 사고 형태 -->
+    <div class="field">
+      <label class="field-label">1. 어떤 일이 있었나요? <span class="req">*</span></label>
+      <div class="type-grid" id="typeGroup">
+        <label class="type-item"><input type="radio" name="type" value="미끄러짐 · 넘어짐" required><span>🧎 미끄러짐<br>넘어짐</span></label>
+        <label class="type-item"><input type="radio" name="type" value="부딪힘 · 끼임"><span>💥 부딪힘<br>끼임</span></label>
+        <label class="type-item"><input type="radio" name="type" value="떨어짐 · 낙하물"><span>⬇️ 떨어짐<br>낙하물</span></label>
+        <label class="type-item"><input type="radio" name="type" value="주사침 찔림 · 혈액 노출"><span>💉 주사침 찔림<br>혈액 노출</span></label>
+        <label class="type-item"><input type="radio" name="type" value="환자/보호자 폭력 · 폭언"><span>🗣 환자·보호자<br>폭력 · 폭언</span></label>
+        <label class="type-item"><input type="radio" name="type" value="무리한 힘 (이송 · 들어올리기)"><span>🏋 무리한 힘<br>이송 · 들기</span></label>
+        <label class="type-item"><input type="radio" name="type" value="화학물질 · 감전 · 화상"><span>⚗️ 화학물질<br>감전 · 화상</span></label>
+        <label class="type-item"><input type="radio" name="type" value="기타"><span>➕ 기타</span></label>
+      </div>
+      <div id="typeNotice" class="type-notice hidden"></div>
+    </div>
+
+    <!-- 2. 직접 겪음 / 목격 -->
+    <div class="field">
+      <label class="field-label">2. 어떻게 알게 되셨나요? <span class="req">*</span></label>
+      <div class="two-grid">
+        <label class="type-item"><input type="radio" name="witness" value="직접 겪음" required><span>직접 겪었어요</span></label>
+        <label class="type-item"><input type="radio" name="witness" value="목격함"><span>목격했어요</span></label>
+      </div>
+    </div>
+
+    <!-- 3. 장소 -->
+    <div class="field">
+      <label class="field-label" for="location">3. 발생 장소 <span class="req">*</span></label>
+      <input type="text" id="location" placeholder="예시: 본관 5병동 복도" required>
+    </div>
+
+    <!-- 4. 일시 -->
+    <div class="field">
+      <label class="field-label" for="occurredAt">4. 발생일시 <span class="req">*</span></label>
+      <input type="datetime-local" id="occurredAt" required>
+    </div>
+
+    <!-- 5. 상황 -->
+    <div class="field">
+      <label class="field-label" for="description">5. 어떤 상황이었나요? <span class="req">*</span></label>
+      <textarea id="description" rows="4" placeholder="예시: 청소 직후 물기가 남아 있어 미끄러질 뻔했습니다." required></textarea>
+    </div>
+
+    <!-- 6. 사진 (선택) -->
+    <div class="field">
+      <label class="field-label">6. 사진 <span class="opt">(선택 — 없으면 건너뛰세요)</span></label>
+      <label class="photo-drop" id="photoDrop">
+        <input type="file" id="photo" accept="image/*" hidden>
+        <span id="photoDropText">📷 사진 촬영 · 선택</span>
+      </label>
+      <img id="photoPreview" class="photo-preview hidden" alt="첨부 사진 미리보기">
+    </div>
+
+    <!-- 7. 위험 정도 (선택) -->
+    <div class="field">
+      <label class="field-label">7. 이대로 두면 어떻게 될까요? <span class="opt">(선택)</span></label>
+      <div class="risk-group">
+        <label class="risk-item r3"><input type="radio" name="risk" value="크게 다칠 수 있음"><span><b>크게 다칠 수 있음</b><small>골절 · 입원이 필요한 정도</small></span></label>
+        <label class="risk-item r2"><input type="radio" name="risk" value="가벼운 부상 가능"><span><b>가벼운 부상 가능</b><small>찰과상 · 타박상 정도</small></span></label>
+        <label class="risk-item r1"><input type="radio" name="risk" value="불편한 정도"><span><b>불편한 정도</b><small>다치지는 않지만 불편함</small></span></label>
+      </div>
+    </div>
+
+    <!-- 8. 개선 의견 (선택) -->
+    <div class="field">
+      <label class="field-label" for="suggestion">8. 이렇게 하면 좋겠어요 <span class="opt">(선택)</span></label>
+      <textarea id="suggestion" rows="3" placeholder="현장에서 느끼신 개선 방법이 있으면 적어 주세요."></textarea>
+    </div>
+
+    <!-- 9. 연락처 (선택) -->
+    <div class="field">
+      <label class="field-label" for="contact">9. 연락처 <span class="opt">(선택 — 익명으로 신고하셔도 됩니다)</span></label>
+      <input type="tel" id="contact" placeholder="처리 결과 안내가 필요하면 입력하세요">
+    </div>
+
+    <div class="field consent-box hidden" id="consentBox">
+      <label class="field-label">10. 개인정보 수집 및 이용 동의</label>
+      <div class="consent-text">
+        <p><strong>수집 항목:</strong> 연락처(전화번호)</p>
+        <p><strong>수집 목적:</strong> 신고 처리 결과 안내 및 추가 확인</p>
+        <p><strong>보유 기간:</strong> 신고 처리 완료 후 1년</p>
+        <p>동의를 거부할 수 있으며, 거부 시 연락처 없이 신고할 수 있습니다.</p>
+      </div>
+      <label class="consent-check">
+        <input type="checkbox" id="consentCheck">
+        <span>개인정보 수집 및 이용에 동의합니다.</span>
+      </label>
+    </div>
+
+    <button type="submit" id="submitBtn" class="submit-btn">신고 제출</button>
+    <p class="foot-note">제출해 주셔서 감사합니다. 안전보건팀이 확인 후 조치하겠습니다.</p>
+  </form>
+
+</main>
+
+<!-- 제출 완료 -->
+<div id="doneModal" class="modal hidden">
+  <div class="modal-sheet">
+    <div class="done-wrap">
+      <div class="done-mark">✓</div>
+      <h2>신고가 접수되었습니다</h2>
+      <p>알려주셔서 감사합니다.<br>안전보건팀이 확인 후 조치하겠습니다.</p>
+      <button type="button" id="againBtn" class="submit-btn">다른 내용 신고하기</button>
+      <a href="start.html" class="ghost-link">처음 화면으로</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="config.js?v=4"></script>
+<script src="storage.js?v=7"></script>
+<script src="photo.js?v=1"></script>
+<script src="safety.js?v=1"></script>
+</body>
+</html>

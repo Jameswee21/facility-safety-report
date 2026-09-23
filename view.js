@@ -12,7 +12,10 @@
   let role = sessionStorage.getItem(ROLE_KEY) || localStorage.getItem(ROLE_KEY);
   if (!ROLE_NAMES[role]) role = null;
 
-  const reportId = new URLSearchParams(location.search).get("id");
+  const params = new URLSearchParams(location.search);
+  const reportId = params.get("id");
+  // kind=safety 이면 안전보건 신고입니다.
+  const KIND = params.get("kind") === "safety" ? "safety" : "facility";
   let report = null;
 
   // ---------- 공통 유틸 ----------
@@ -96,11 +99,12 @@
     }
 
     // 조치완료된 건은 조치 전·후 사진을 나란히 표시
+    const noPhoto = '<div class="no-photo-box">첨부된 사진이 없습니다</div>';
     const photoHtml = (done && r.donePhoto) ? `
         <div class="ba-grid">
           <div class="ba-item">
             <div class="ba-label before">조치 전</div>
-            <img class="view-photo" data-full="${escapeHtml(r.photo)}" src="${escapeHtml(r.photo)}" alt="조치 전 사진">
+            ${r.photo ? `<img class="view-photo" data-full="${escapeHtml(r.photo)}" src="${escapeHtml(r.photo)}" alt="조치 전 사진">` : noPhoto}
           </div>
           <div class="ba-item">
             <div class="ba-label after">조치 후</div>
@@ -108,9 +112,9 @@
           </div>
         </div>
         <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>`
-      : `
+      : (r.photo ? `
         <img class="view-photo" data-full="${escapeHtml(r.photo)}" src="${escapeHtml(r.photo)}" alt="현장 사진">
-        <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>`;
+        <p class="photo-hint">사진을 누르면 크게 볼 수 있습니다</p>` : noPhoto);
 
     $("#viewBody").innerHTML = `
       <div class="view-card">
@@ -128,6 +132,9 @@
 
       <div class="view-card">
         <table class="view-table">
+          ${KIND === "safety" && r.witness ? `<tr><th>구분</th><td>${escapeHtml(r.witness)}</td></tr>` : ""}
+          ${KIND === "safety" && r.risk ? `<tr><th>위험도</th><td>${escapeHtml(r.risk)}</td></tr>` : ""}
+          ${KIND === "safety" && r.suggestion ? `<tr><th>개선 의견</th><td style="white-space:pre-wrap">${escapeHtml(r.suggestion)}</td></tr>` : ""}
           <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
           <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
           <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
@@ -182,7 +189,7 @@
         completedAt: done ? new Date().toISOString().slice(0, 10) : null,
         donePhoto: done ? await Store.uploadPhoto(donePhotoData) : null
       };
-      await Store.updateReport(report.id, patch);
+      await Store.updateReport(report.id, patch, KIND);
       Object.assign(report, patch);
       donePhotoData = null;
       render();
@@ -248,6 +255,8 @@
 
   // ---------- 초기화 ----------
   async function init() {
+    const t = $("#viewTitle");
+    if (t) t.textContent = KIND === "safety" ? "안전보건 조치의뢰" : "시설 보수 업무의뢰";
     if (!(window.CSS && CSS.supports && CSS.supports("-webkit-text-security", "disc"))) {
       $("#mLoginCode").type = "password";
     }
@@ -258,7 +267,7 @@
     }
     try {
       await Store.init();
-      report = await Store.getReport(reportId);
+      report = await Store.getReport(reportId, KIND);
     } catch (err) {
       console.error(err);
       $("#viewBody").innerHTML = '<p class="empty-msg">신고를 불러오지 못했습니다.</p>';
