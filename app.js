@@ -754,10 +754,23 @@
   }
 
   // ---------- 초기화 ----------
+  // 첫 화면(start.html)에서 고른 구분에 따라 신고유형을 미리 선택
+  function preselectType() {
+    const t = new URLSearchParams(location.search).get("type");
+    const map = {
+      safety: "유해 위험 요소(아차사고 포함)",   // 다칠 것 같아요 / 다칠 뻔했어요
+      facility: "시설파손/고장"                  // 고장났어요 / 불편해요
+    };
+    if (!map[t]) return;
+    const radio = document.querySelector(`input[name="type"][value="${map[t]}"]`);
+    if (radio) radio.checked = true;
+  }
+
   async function init() {
     $("#headerTitle").textContent = window.APP_CONFIG.appName;
     document.title = window.APP_CONFIG.appName;
     setDefaultDateTime();
+    preselectType();
     updateSubmitState();
     refreshAdminUI();
     // CSS 마스킹을 지원하지 않는 브라우저에서는 password 타입으로 전환
