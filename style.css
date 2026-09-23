@@ -574,3 +574,31 @@ textarea { resize: vertical; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* 분기화면(start.html)으로 돌아가기 */
+.back-btn {
+  color: #fff;
+  text-decoration: none;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 300;
+  width: 26px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-header h1 { flex: 1; }
+.switch-note {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 18px;
+  line-height: 1.7;
+}
+.switch-note a {
+  display: block;
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  margin-top: 2px;
+}
