@@ -101,7 +101,6 @@
       t.classList.toggle("active", t.dataset.view === name)
     );
     if (name === "list") renderReports();
-    if (name === "board") renderSuggestions();
     window.scrollTo(0, 0);
   }
 
@@ -697,61 +696,6 @@
   $("#detailModal").addEventListener("click", (e) => {
     if (e.target === $("#detailModal")) closeDetail();
   });
-
-  // ---------- 안전 건의함 ----------
-  $("#writeBtn").addEventListener("click", () => {
-    $("#suggestForm").classList.toggle("hidden");
-  });
-  $("#writeCancelBtn").addEventListener("click", () => {
-    $("#suggestForm").reset();
-    $("#suggestForm").classList.add("hidden");
-  });
-
-  $("#suggestForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const title = $("#sTitle").value.trim();
-    const content = $("#sContent").value.trim();
-    if (!title || !content) return toast("제목과 내용을 입력해 주세요.");
-    try {
-      await Store.addSuggestion({
-        id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        title,
-        content,
-        author: $("#sAuthor").value.trim() || null,
-        createdAt: new Date().toISOString()
-      });
-      $("#suggestForm").reset();
-      $("#suggestForm").classList.add("hidden");
-      toast("건의가 등록되었습니다.");
-      renderSuggestions();
-    } catch (err) {
-      console.error(err);
-      toast("등록에 실패했습니다.");
-    }
-  });
-
-  async function renderSuggestions() {
-    const wrap = $("#suggestList");
-    wrap.innerHTML = '<div class="empty-msg">불러오는 중...</div>';
-    let list = [];
-    try {
-      list = await Store.listSuggestions();
-    } catch (err) {
-      console.error(err);
-      wrap.innerHTML = '<div class="empty-msg">건의 목록을 불러오지 못했습니다.</div>';
-      return;
-    }
-    if (!list.length) {
-      wrap.innerHTML = '<div class="empty-msg">등록된 건의가 없습니다.<br>첫 번째 안전 건의를 남겨보세요!</div>';
-      return;
-    }
-    wrap.innerHTML = list.map((s) => `
-      <div class="suggest-card">
-        <div class="s-title">${escapeHtml(s.title)}</div>
-        <div class="s-meta">${escapeHtml(s.author || "익명")} · ${fmtDateTime(s.createdAt)}</div>
-        <div class="s-content">${escapeHtml(s.content)}</div>
-      </div>`).join("");
-  }
 
   // ---------- 초기화 ----------
   // 첫 화면(start.html)에서 고른 구분에 따라 신고유형을 미리 선택
