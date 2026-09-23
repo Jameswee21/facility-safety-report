@@ -114,16 +114,18 @@
     $("#roleBadge").textContent = `👤 ${ROLE_NAMES[role]}`;
     $("#csvBtn").classList.toggle("hidden", !canManage());
     $("#pwBtn").classList.toggle("hidden", !isMaster());
+    // 안전보건 신고 탭은 마스터 계정에만 표시
+    document.querySelector('.page-tab[data-tab="safety"]').classList.toggle("hidden", !isMaster());
     // 계정에 맞는 사용 매뉴얼로 연결
     $("#manualLink").href = role === "staff" ? "manual-staff.html" : "manual-manager.html";
     startClock();
     loadReports();
-    loadSafety(true);
+    if (isMaster()) loadSafety(true);
     loadSuggestions();
     refreshTimer = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       loadReports(true);
-      loadSafety(true);
+      if (isMaster()) loadSafety(true);
     }, 60000);
   }
 
@@ -357,7 +359,9 @@
     })
   );
   $("#refreshBtn").addEventListener("click", () => {
-    loadReports(); loadSafety(true); toast("새로고침했습니다.");
+    loadReports();
+    if (isMaster()) loadSafety(true);
+    toast("새로고침했습니다.");
   });
 
   // ---------- 상세 모달 ----------
@@ -1112,7 +1116,7 @@
       $("#panel-suggestions").classList.toggle("hidden", t.dataset.tab !== "suggestions");
       $("#statsRow").classList.toggle("hidden", t.dataset.tab !== "reports");
       if (t.dataset.tab === "suggestions") loadSuggestions();
-      if (t.dataset.tab === "safety") loadSafety();
+      if (t.dataset.tab === "safety" && isMaster()) loadSafety();
     })
   );
 
