@@ -369,8 +369,10 @@
   let detailEditing = false;
   let donePhotoData = null;   // 첨부한 완료사진 (업로드 전)
 
+  // 현재 신고 폼에서 고를 수 있는 유형
+  // ('유해 위험 요소'는 안전보건 신고로 분리되어 목록에서 빠졌습니다.
+  //  그 유형으로 접수된 과거 신고를 수정할 때는 아래에서 자동으로 선택지에 추가합니다.)
   const REPORT_TYPES = [
-    "유해 위험 요소(아차사고 포함)",
     "시설파손/고장",
     "위생/환경",
     "기타"
@@ -430,7 +432,7 @@
       <div class="edit-form">
         <label class="pw-label">신고유형</label>
         <select id="editType">
-          ${REPORT_TYPES.map((t) =>
+          ${(REPORT_TYPES.includes(r.type) ? REPORT_TYPES : [r.type, ...REPORT_TYPES]).map((t) =>
             `<option value="${escapeHtml(t)}" ${t === r.type ? "selected" : ""}>${escapeHtml(t)}</option>`
           ).join("")}
         </select>
