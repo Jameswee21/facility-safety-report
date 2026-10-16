@@ -676,3 +676,68 @@ body {
   font-size: 13.5px;
   background: #f8fafc;
 }
+
+/* ========== 새 신고 실시간 알림 ========== */
+.top-right .alert-off { background: rgba(15, 23, 42, .3); opacity: .8; }
+
+.new-alert {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  background: var(--card);
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, .22);
+  animation: naPop .25s ease-out;
+}
+@keyframes naPop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.na-ico {
+  font-size: 24px;
+  animation: naRing 1s ease-in-out 3;
+}
+@keyframes naRing {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(14deg); }
+  75% { transform: rotate(-14deg); }
+}
+.na-body { flex: 1; min-width: 0; }
+.na-title { font-size: 15px; font-weight: 800; color: var(--primary-dark); }
+.na-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.na-go {
+  flex: 0 0 auto;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.na-go:hover { background: var(--primary-dark); }
+.na-x {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+}

@@ -118,12 +118,13 @@
     document.querySelector('.page-tab[data-tab="safety"]').classList.toggle("hidden", !isMaster());
     // 계정에 맞는 사용 매뉴얼로 연결
     $("#manualLink").href = role === "staff" ? "manual-staff.html" : "manual-manager.html";
+    refreshAlertBtn();
     startClock();
     loadReports();
     if (isMaster()) loadSafety(true);
     loadSuggestions();
+    // 다른 창을 보고 있을 때도 새 신고를 알리기 위해 계속 확인합니다.
     refreshTimer = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
       loadReports(true);
       if (isMaster()) loadSafety(true);
     }, 60000);
@@ -140,6 +141,107 @@
     setInterval(tick, 1000);
   }
 
+  // ===============================================
+  // 새 신고 실시간 알림 (화면 배너 + 알림음 + 바탕화면 알림)
+  // ===============================================
+  const ALERT_KEY = "fs_alert_on";
+  let alertOn = localStorage.getItem(ALERT_KEY) !== "0";   // 기본값: 켜짐
+  // 첫 조회는 '기준'만 잡고 알리지 않습니다.
+  const knownIds = { facility: null, safety: null };
+  let pendingNew = 0;
+  const baseTitle = document.title;
+
+  function refreshAlertBtn() {
+    $("#alertBtn").textContent = alertOn ? "🔔 알림 켜짐" : "🔕 알림 꺼짐";
+    $("#alertBtn").classList.toggle("alert-off", !alertOn);
+  }
+
+  $("#alertBtn").addEventListener("click", async () => {
+    alertOn = !alertOn;
+    localStorage.setItem(ALERT_KEY, alertOn ? "1" : "0");
+    refreshAlertBtn();
+    if (alertOn) {
+      // 바탕화면 알림 권한 요청 (거부해도 화면 배너·알림음은 동작)
+      if ("Notification" in window && Notification.permission === "default") {
+        try { await Notification.requestPermission(); } catch {}
+      }
+      toast("새 신고가 들어오면 알려드립니다.");
+    } else {
+      toast("알림을 껐습니다.");
+    }
+  });
+
+  // 짧은 알림음 (별도 음원 파일 없이 생성)
+  function beep() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      [0, 0.22].forEach((delay, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = "sine";
+        o.frequency.value = i === 0 ? 880 : 1175;
+        const t = ctx.currentTime + delay;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.start(t);
+        o.stop(t + 0.2);
+      });
+      setTimeout(() => { try { ctx.close(); } catch {} }, 1200);
+    } catch {}
+  }
+
+  // 새로 들어온 신고가 있는지 확인
+  function checkNew(list, kind) {
+    const ids = new Set(list.map((r) => String(r.id)));
+    if (knownIds[kind] === null) { knownIds[kind] = ids; return; }
+    const fresh = list.filter((r) => !knownIds[kind].has(String(r.id)));
+    knownIds[kind] = ids;
+    if (fresh.length) notifyNew(fresh, kind);
+  }
+
+  function notifyNew(fresh, kind) {
+    const label = kind === "safety" ? "안전보건 신고" : "시설 신고";
+    const title = `새 ${label} ${fresh.length}건`;
+    const desc = fresh.slice(0, 3).map((r) => r.location).join(" · ")
+      + (fresh.length > 3 ? ` 외 ${fresh.length - 3}건` : "");
+
+    // 화면 배너 (알림 설정과 무관하게 항상 표시)
+    $("#naTitle").textContent = title;
+    $("#naDesc").textContent = desc;
+    $("#newAlert").dataset.kind = kind;
+    $("#newAlert").classList.remove("hidden");
+
+    // 탭 제목에 건수 표시 (다른 창을 보고 있어도 눈에 띄도록)
+    pendingNew += fresh.length;
+    document.title = `(${pendingNew}) ${baseTitle}`;
+
+    if (!alertOn) return;
+    beep();
+    if ("Notification" in window && Notification.permission === "granted") {
+      try { new Notification(title, { body: desc, tag: "fs-new-" + kind }); } catch {}
+    }
+  }
+
+  function clearNewAlert() {
+    $("#newAlert").classList.add("hidden");
+    pendingNew = 0;
+    document.title = baseTitle;
+  }
+
+  $("#naClose").addEventListener("click", clearNewAlert);
+  $("#naGo").addEventListener("click", () => {
+    const kind = $("#newAlert").dataset.kind;
+    clearNewAlert();
+    const tab = document.querySelector(
+      kind === "safety" ? '.page-tab[data-tab="safety"]' : '.page-tab[data-tab="reports"]');
+    if (tab && !tab.classList.contains("hidden")) tab.click();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
   // ---------- 신고 목록 ----------
   async function loadReports(silent) {
     try {
@@ -149,6 +251,7 @@
       if (!silent) toast("신고내역을 불러오지 못했습니다.");
       return;
     }
+    checkNew(reportsCache, "facility");
     renderStats();
     renderTable();
   }
@@ -792,6 +895,7 @@
       return;
     }
     $("#tabCntSafety").textContent = safetyCache.length ? `(${safetyCache.length})` : "";
+    checkNew(safetyCache, "safety");
     renderSafetySummary();
     renderSafetyTable();
   }

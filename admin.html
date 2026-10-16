@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e7490">
 <title>신고 처리현황 관리자 대시보드</title>
-<link rel="stylesheet" href="admin.css?v=11">
+<link rel="stylesheet" href="admin.css?v=12">
 </head>
 <body>
 
@@ -37,6 +37,7 @@
     </div>
     <div class="top-right">
       <span id="clock" class="clock"></span>
+      <button id="alertBtn" type="button" title="새 신고 알림 켜기/끄기">🔔 알림 켜짐</button>
       <button id="refreshBtn" type="button" title="새로고침">🔄 새로고침</button>
       <button id="csvBtn" type="button" title="점검사항 조치현황 엑셀 다운로드">⬇️ 엑셀 다운로드</button>
       <button id="pwBtn" type="button" class="hidden" title="계정 비밀번호 관리">🔐 비밀번호 관리</button>
@@ -220,12 +221,23 @@
   </div>
 </div>
 
+<!-- 새 신고 알림 배너 -->
+<div id="newAlert" class="new-alert hidden">
+  <span class="na-ico">🔔</span>
+  <div class="na-body">
+    <div class="na-title" id="naTitle">새 신고</div>
+    <div class="na-desc" id="naDesc"></div>
+  </div>
+  <button type="button" id="naGo" class="na-go">확인하기</button>
+  <button type="button" id="naClose" class="na-x" aria-label="닫기">✕</button>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
 <script src="config.js?v=5"></script>
 <script src="storage.js?v=7"></script>
 <script src="photo.js?v=1"></script>
 <script src="xlsx.js?v=1"></script>
-<script src="admin.js?v=19"></script>
+<script src="admin.js?v=20"></script>
 </body>
 </html>
