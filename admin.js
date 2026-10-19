@@ -196,6 +196,9 @@
 
   // 새로 들어온 신고가 있는지 확인
   function checkNew(list, kind) {
+    // 안전보건 신고는 마스터 계정에만 알립니다.
+    // (시설팀장·담당자는 안전보건 탭 자체가 보이지 않으므로 알릴 대상이 아닙니다)
+    if (kind === "safety" && !isMaster()) return;
     const ids = new Set(list.map((r) => String(r.id)));
     if (knownIds[kind] === null) { knownIds[kind] = ids; return; }
     const fresh = list.filter((r) => !knownIds[kind].has(String(r.id)));
