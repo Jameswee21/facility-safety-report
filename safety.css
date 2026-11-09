@@ -226,6 +226,22 @@ textarea { resize: vertical; line-height: 1.6; }
   line-height: 1.6;
 }
 
+/* 시설 신고 화면으로 다시 고르러 가기 */
+.switch-note {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 18px;
+  line-height: 1.7;
+}
+.switch-note a {
+  display: block;
+  color: var(--sf);
+  font-weight: 700;
+  text-decoration: none;
+  margin-top: 2px;
+}
+
 /* ---------- 제출 완료 ---------- */
 .modal {
   position: fixed;
