@@ -552,9 +552,6 @@
         <label class="pw-label">상황설명</label>
         <textarea id="editDescription" rows="5">${escapeHtml(r.description || "")}</textarea>
 
-        <label class="pw-label">연락처 <span style="font-weight:400;color:var(--muted)">(비우면 삭제)</span></label>
-        <input type="text" id="editContact" value="${escapeHtml(r.contact || "")}">
-
         <div class="edit-btn-row">
           <button type="button" id="editSaveBtn" class="save-btn">💾 저장</button>
           <button type="button" id="editCancelBtn" class="cancel-btn">취소</button>
@@ -568,7 +565,6 @@
       const occurredAt = $("#editOccurredAt").value;
       const location = $("#editLocation").value.trim();
       const description = $("#editDescription").value.trim();
-      const contact = $("#editContact").value.trim();
       if (!occurredAt) return toast("발생일시를 입력해 주세요.");
       if (!location) return toast("발생위치를 입력해 주세요.");
       if (!description) return toast("상황설명을 입력해 주세요.");
@@ -578,7 +574,7 @@
       btn.textContent = "저장 중...";
       try {
         await Store.updateReport(r.id, {
-          type, occurredAt, location, description, contact: contact || null
+          type, occurredAt, location, description
         });
         await loadReports(true);
         detailEditing = false;
@@ -630,7 +626,6 @@
         <tr><th>발생일시</th><td>${fmtDateTime(r.occurredAt)}</td></tr>
         <tr><th>발생위치</th><td>${escapeHtml(r.location)}</td></tr>
         <tr><th>상황설명</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
-        <tr><th>연락처</th><td>${escapeHtml(r.contact || "-")}</td></tr>
         <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
@@ -1074,7 +1069,6 @@
         <tr><th>상황</th><td style="white-space:pre-wrap">${escapeHtml(r.description)}</td></tr>
         <tr><th>위험도</th><td>${r.risk ? `<span class="risk-badge ${RISK_CLASS[r.risk] || ""}">${escapeHtml(r.risk)}</span>` : "-"}</td></tr>
         ${r.suggestion ? `<tr><th>개선 의견</th><td style="white-space:pre-wrap">${escapeHtml(r.suggestion)}</td></tr>` : ""}
-        <tr><th>연락처</th><td>${escapeHtml(r.contact || "- (익명)")}</td></tr>
         <tr><th>담당자</th><td>${assigned ? escapeHtml(r.assignee) : '<span class="need-assign">미지정</span>'}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>

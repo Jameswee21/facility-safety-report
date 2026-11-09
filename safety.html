@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#b91c1c">
 <title>안전보건 신고 | 위험요소 · 아차사고</title>
-<link rel="stylesheet" href="safety.css?v=1">
+<link rel="stylesheet" href="safety.css?v=2">
 </head>
 <body>
 
@@ -72,6 +72,14 @@
       <input type="datetime-local" id="occurredAt" required>
     </div>
 
+    <!-- 개인정보 입력 주의 안내 -->
+    <div class="privacy-note">
+      <p class="privacy-note-title">⚠️ 개인정보가 담기지 않도록 해주세요</p>
+      <p>환자·보호자·직원의 <b>이름, 등록번호, 생년월일, 연락처</b>는 적지 마세요.
+         「OOO 환자」 대신 <b>「환자 한 분」</b>처럼 적어 주시면 됩니다.</p>
+      <p>사진에 <b>얼굴 · 명찰 · 모니터 화면 · 서류</b>가 찍히지 않았는지 확인해주세요.</p>
+    </div>
+
     <!-- 5. 상황 -->
     <div class="field">
       <label class="field-label" for="description">5. 어떤 상황이었나요? <span class="req">*</span></label>
@@ -104,26 +112,6 @@
       <textarea id="suggestion" rows="3" placeholder="현장에서 느끼신 개선 방법이 있으면 적어 주세요."></textarea>
     </div>
 
-    <!-- 9. 연락처 (선택) -->
-    <div class="field">
-      <label class="field-label" for="contact">9. 연락처 <span class="opt">(선택 — 익명으로 신고하셔도 됩니다)</span></label>
-      <input type="tel" id="contact" placeholder="처리 결과 안내가 필요하면 입력하세요">
-    </div>
-
-    <div class="field consent-box hidden" id="consentBox">
-      <label class="field-label">10. 개인정보 수집 및 이용 동의</label>
-      <div class="consent-text">
-        <p><strong>수집 항목:</strong> 연락처(전화번호)</p>
-        <p><strong>수집 목적:</strong> 신고 처리 결과 안내 및 추가 확인</p>
-        <p><strong>보유 기간:</strong> 신고 처리 완료 후 1년</p>
-        <p>동의를 거부할 수 있으며, 거부 시 연락처 없이 신고할 수 있습니다.</p>
-      </div>
-      <label class="consent-check">
-        <input type="checkbox" id="consentCheck">
-        <span>개인정보 수집 및 이용에 동의합니다.</span>
-      </label>
-    </div>
-
     <button type="submit" id="submitBtn" class="submit-btn">신고 제출</button>
     <p class="foot-note">제출해 주셔서 감사합니다. 안전보건팀이 확인 후 조치하겠습니다.</p>
   </form>
@@ -148,6 +136,6 @@
 <script src="config.js?v=5"></script>
 <script src="storage.js?v=7"></script>
 <script src="photo.js?v=1"></script>
-<script src="safety.js?v=1"></script>
+<script src="safety.js?v=2"></script>
 </body>
 </html>

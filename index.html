@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0e7490">
 <title>시설 보수 신고</title>
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -45,9 +45,16 @@
         <input type="datetime-local" id="occurredAt" required>
       </div>
 
+      <!-- 개인정보 입력 주의 안내 -->
+      <div class="privacy-note">
+        <p class="privacy-note-title">⚠️ 개인정보가 담기지 않도록 해주세요</p>
+        <p>환자·보호자·직원의 <b>이름, 등록번호, 생년월일, 연락처</b>는 적지 마세요.</p>
+        <p>사진에 <b>얼굴 · 명찰 · 모니터 화면 · 서류</b>가 찍히지 않았는지 확인해주세요.</p>
+      </div>
+
       <div class="field">
         <label class="field-label" for="description">4. 상황설명 <span class="req">*</span></label>
-        <textarea id="description" rows="4" placeholder="발견한 상황을 자세히 적어주세요." required></textarea>
+        <textarea id="description" rows="4" placeholder="발견한 상황을 자세히 적어주세요. (사람 이름·환자 정보는 빼고 적어주세요)" required></textarea>
       </div>
 
       <div class="field">
@@ -57,25 +64,6 @@
           <span id="photoDropText">📷 눌러서 사진 선택 또는 촬영</span>
         </label>
         <img id="photoPreview" class="photo-preview hidden" alt="첨부 사진 미리보기">
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="contact">6. 연락처 <span class="opt">(선택사항)</span></label>
-        <input type="tel" id="contact" placeholder="처리 결과 안내가 필요하면 입력하세요">
-      </div>
-
-      <div class="field consent-box hidden" id="consentBox">
-        <label class="field-label">7. 개인정보 수집 및 이용 동의</label>
-        <div class="consent-text">
-          <p><strong>수집 항목:</strong> 연락처(전화번호)</p>
-          <p><strong>수집 목적:</strong> 신고 처리 결과 안내 및 추가 확인</p>
-          <p><strong>보유 기간:</strong> 신고 처리 완료 후 1년</p>
-          <p>동의를 거부할 수 있으며, 거부 시 연락처 없이 신고할 수 있습니다.</p>
-        </div>
-        <label class="consent-check">
-          <input type="checkbox" id="consentCheck">
-          <span>개인정보 수집 및 이용에 동의합니다.</span>
-        </label>
       </div>
 
       <button type="submit" id="submitBtn" class="primary-btn">제출</button>
@@ -160,6 +148,6 @@
 <script src="config.js?v=5"></script>
 <script src="storage.js?v=7"></script>
 <script src="photo.js?v=1"></script>
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

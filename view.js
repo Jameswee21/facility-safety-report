@@ -138,7 +138,6 @@
           <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
           <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
           <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
-          ${role && r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
         </table>
       </div>
 

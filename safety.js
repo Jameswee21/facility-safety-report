@@ -61,16 +61,6 @@
     }
   });
 
-  // 연락처 입력 시 개인정보 동의 화면 표시
-  function updateSubmitState() {
-    const hasContact = $("#contact").value.trim().length > 0;
-    $("#consentBox").classList.toggle("hidden", !hasContact);
-    if (!hasContact) $("#consentCheck").checked = false;
-    $("#submitBtn").disabled = hasContact && !$("#consentCheck").checked;
-  }
-  $("#contact").addEventListener("input", updateSubmitState);
-  $("#consentCheck").addEventListener("change", updateSubmitState);
-
   // 제출
   $("#safetyForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -82,10 +72,6 @@
     if (!$("#location").value.trim()) return toast("3번 — 발생 장소를 입력해 주세요.");
     if (!$("#occurredAt").value) return toast("4번 — 발생일시를 선택해 주세요.");
     if (!$("#description").value.trim()) return toast("5번 — 어떤 상황이었는지 적어 주세요.");
-    const contact = $("#contact").value.trim();
-    if (contact && !$("#consentCheck").checked)
-      return toast("개인정보 수집 및 이용에 동의해 주세요.");
-
     const btn = $("#submitBtn");
     btn.disabled = true;
     btn.textContent = "제출 중...";
@@ -100,8 +86,6 @@
         photo: photoDataUrl,                       // 없으면 null
         risk: risk ? risk.value : null,
         suggestion: $("#suggestion").value.trim() || null,
-        contact: contact || null,
-        consent: !!contact,
         assignee: null,
         status: "접수",
         completedAt: null,
@@ -116,7 +100,6 @@
     } finally {
       btn.disabled = false;
       btn.textContent = "신고 제출";
-      updateSubmitState();
     }
   });
 
@@ -127,7 +110,6 @@
     $("#photoDropText").textContent = "📷 사진 촬영 · 선택";
     $("#typeNotice").classList.add("hidden");
     setDefaultDateTime();
-    updateSubmitState();
   }
 
   $("#againBtn").addEventListener("click", () => {
@@ -138,7 +120,6 @@
   // ---------- 초기화 ----------
   async function init() {
     setDefaultDateTime();
-    updateSubmitState();
     try {
       await Store.init();
     } catch (err) {

@@ -187,21 +187,10 @@
       prev.src = photoDataUrl;
       prev.classList.remove("hidden");
       $("#photoDropText").textContent = "📷 사진 변경하기";
-      updateSubmitState();
     } catch {
       toast("사진을 불러올 수 없습니다. 다른 사진을 선택해 주세요.");
     }
   });
-
-  // 연락처 입력 시 개인정보 동의 화면 표시 + 제출버튼 제어
-  function updateSubmitState() {
-    const hasContact = $("#contact").value.trim().length > 0;
-    $("#consentBox").classList.toggle("hidden", !hasContact);
-    if (!hasContact) $("#consentCheck").checked = false;
-    $("#submitBtn").disabled = hasContact && !$("#consentCheck").checked;
-  }
-  $("#contact").addEventListener("input", updateSubmitState);
-  $("#consentCheck").addEventListener("change", updateSubmitState);
 
   $("#reportForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -211,9 +200,6 @@
     if (!$("#occurredAt").value) return toast("발생일시를 선택해 주세요.");
     if (!$("#description").value.trim()) return toast("상황설명을 입력해 주세요.");
     if (!photoDataUrl) return toast("사진첨부는 필수입니다.");
-    const contact = $("#contact").value.trim();
-    if (contact && !$("#consentCheck").checked)
-      return toast("개인정보 수집 및 이용에 동의해 주세요.");
 
     const btn = $("#submitBtn");
     btn.disabled = true;
@@ -226,8 +212,6 @@
         occurredAt: $("#occurredAt").value,
         description: $("#description").value.trim(),
         photo: photoDataUrl,
-        contact: contact || null,
-        consent: !!contact,
         assignee: null,
         status: "접수",
         completedAt: null,
@@ -239,7 +223,6 @@
       $("#photoPreview").classList.add("hidden");
       $("#photoDropText").textContent = "📷 눌러서 사진 선택 또는 촬영";
       setDefaultDateTime();
-      updateSubmitState();
       toast("신고가 접수되었습니다. 감사합니다!");
       switchView("list");
     } catch (err) {
@@ -248,7 +231,6 @@
     } finally {
       btn.disabled = false;
       btn.textContent = "제출";
-      updateSubmitState();
     }
   });
 
@@ -417,10 +399,6 @@
           <label class="field-label">상황설명</label>
           <textarea id="editDescription" rows="5">${escapeHtml(r.description || "")}</textarea>
         </div>
-        <div class="field">
-          <label class="field-label">연락처 <span class="opt">(비우면 삭제)</span></label>
-          <input type="tel" id="editContact" value="${escapeHtml(r.contact || "")}">
-        </div>
         <div class="btn-row">
           <button type="button" id="editSaveBtn" class="primary-btn">💾 저장</button>
           <button type="button" id="editCancelBtn" class="ghost-btn">취소</button>
@@ -434,7 +412,6 @@
       const occurredAt = $("#editOccurredAt").value;
       const location = $("#editLocation").value.trim();
       const description = $("#editDescription").value.trim();
-      const contact = $("#editContact").value.trim();
       if (!occurredAt) return toast("발생일시를 입력해 주세요.");
       if (!location) return toast("발생위치를 입력해 주세요.");
       if (!description) return toast("상황설명을 입력해 주세요.");
@@ -444,7 +421,7 @@
       btn.textContent = "저장 중...";
       try {
         await Store.updateReport(r.id, {
-          type, occurredAt, location, description, contact: contact || null
+          type, occurredAt, location, description
         });
         await renderReports();
         detailEditing = false;
@@ -535,7 +512,6 @@
         <tr><th>담당자</th><td>${escapeHtml(r.assignee || "미지정")}</td></tr>
         <tr><th>조치일</th><td>${r.completedAt ? fmtDate(r.completedAt) : "-"}</td></tr>
         <tr><th>상태</th><td><span class="status-badge ${statusClass(st)}">${escapeHtml(st)}</span></td></tr>
-        ${r.contact ? `<tr><th>연락처</th><td>${escapeHtml(r.contact)}</td></tr>` : ""}
       </table>
       ${(done && r.donePhoto) ? `
         <div class="ba-grid">
@@ -713,7 +689,6 @@
     document.title = window.APP_CONFIG.appName;
     setDefaultDateTime();
     preselectType();
-    updateSubmitState();
     refreshAdminUI();
     // CSS 마스킹을 지원하지 않는 브라우저에서는 password 타입으로 전환
     if (!(window.CSS && CSS.supports && CSS.supports("-webkit-text-security", "disc"))) {

@@ -187,23 +187,21 @@ textarea { resize: vertical; line-height: 1.6; }
 .risk-item.r1:has(input:checked) b { color: #0369a1; }
 
 /* ---------- 개인정보 동의 ---------- */
-.consent-box {
-  background: var(--card);
-  border: 1px solid var(--line);
+/* ---------- 개인정보 입력 주의 안내 ---------- */
+.privacy-note {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
   border-radius: 13px;
-  padding: 15px;
+  padding: 14px 15px;
+  margin-bottom: 22px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #78350f;
 }
-.consent-text { font-size: 13px; color: var(--muted); margin-bottom: 11px; }
-.consent-text p { margin-bottom: 4px; }
-.consent-check {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-weight: 700;
-  font-size: 14.5px;
-  cursor: pointer;
-}
-.consent-check input { width: 21px; height: 21px; accent-color: var(--sf); }
+.privacy-note-title { font-weight: 800; font-size: 15px; margin-bottom: 6px; }
+.privacy-note p { margin-bottom: 5px; }
+.privacy-note p:last-child { margin-bottom: 0; }
+.privacy-note b { font-weight: 800; }
 
 /* ---------- 제출 ---------- */
 .submit-btn {
